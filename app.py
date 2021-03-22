@@ -309,9 +309,6 @@ app.layout =  ndc.NRELApp(
                                 viewState = viewState,
                                 layers=initialLayers
                             ),
-                            # dgl.MapLegend(id='mapLegend',
-                            #    title='Map Legend'
-                            # )
                           ])
                     ]),
                     # Feeder graph tile
@@ -671,245 +668,245 @@ def createTimeSeriesSummaries(value, timestep):
 #------------------------------------------------#
 # Callbacks for detail files
 #------------------------------------------------#
-@app.callback(Output("network-map", "layers"),
-              #Output("mapLegend","layers")],
-              [Input('timestep', 'data'),
-               Input('busFile', 'data'),
-               #Input('branchFile', 'data')
-               ],
-              [#State('busFile', 'data'),
-               #State('branchFile', 'data'),
-               #State('busVariable', 'data'),
-               #State('branchVariable', 'data'),
-               #State('busDataColor', 'data'),
-               #State('branchDataColor', 'data'),
-               State('busLossExtents', 'data'),
-               State('busThermalExtents', 'data'),
-               State('busRenewableExtents', 'data')],
-              prevent_initial_call=True)
-def createMap(timestep, busFile, busLossExtents, busThermalExtents, busRenewableExtents):
-    #branchFile, busFileState, branchFileState, busVariable, branchVariable, busColor, branchColor,):
-    #print("update map",timestep, busVariable, branchFile, busFileState, branchFileState)
-
-    #print(busFile)
-
-    if(timestep == None):
-        raise PreventUpdate()
-
-    #print(daterange[timestep])
-    # Create the map (and legend) layers
-    mapLayers=[]
-    legendLayers=[]
-
-    # If we have branch data
-    # if(branchFile != None):
-    #
-    #     # Grab the current timeste of the bus data
-    #     branchData = gl.branchDataStore.loc[gl.branchDataStore['DateTime'] == timeSteps[timestep]].values[0].tolist()
-    #     branchData.pop(0) # (remove the timestamp)
-    #
-    #     # Append the data to the geometry data
-    #     branchMapData = branch
-    #     branchMapData[branchVariable] = branchData
-    #
-    #     # Get the extent of the data
-    #     branchExtents = [min(branchData), max(branchData)]
-    #
-    #     #colorscales = px.colors.named_colorscales()
-    #     #print("colors?" , colorscales)
-    #     #plotly.colors.colorscale_to_colors(colorscales[0])
-    #     #print(px.colors.sequential.Plasma)
-    #
-    #     lineLayer = {
-    #         "type": "LineLayer",
-    #         "id": 'line-layer',
-    #         "data": branchMapData.to_dict(orient='records'),
-    #         "pickable": False,
-    #         "opacity": 0.8,
-    #         "widthScale": 1,
-    #         "widthMinPixels":1,
-    #         "widthMaxPixels":5,
-    #         "getWidth": "function(d){return d['"+branchVariable+"']}",
-    #         "getSourcePosition": "function(d){return d['fromPos']}",
-    #         "getTargetPosition": "function(d){return d['toPos']}" ,
-    #         "getColor": {"scale":{"type":colorMaps['branch']['scale'],
-    #                               "range":  colorMaps['branch']['rangeRGB'],
-    #                               "domain": branchExtents,
-    #                               "value": branchVariable,
-    #                              }}
-    #
-    #
-    #     }
-    #     mapLayers[0] = lineLayer
-
-    # If we have bus data
-    if(busFile != None):
-
-        # Grab the current timestep of the bus data, rename column to the variable name
-        mapLayers.append(initialLayers[0])
-        mapLayers.append(initialLayers[1])
-
-        if(not gl.busLossStore.empty):
-            busLoss = gl.busLossStore[['Bus ID',daterange[timestep]]]
-            busLoss = busLoss.astype({'Bus ID': 'int64', daterange[timestep]:'float64'})
-            busLoss = busLoss.rename(columns={daterange[timestep]: "Loss"})
-            #print(busLoss)
-
-        #print("gl", gl.busThermalStore)
-        if(not gl.busThermalStore.empty):
-            busThermal= gl.busThermalStore[['Bus ID',daterange[timestep]]]
-            busThermal = busThermal.astype({'Bus ID': 'int64', daterange[timestep]:'float64'})
-            busThermal = busThermal.rename(columns={daterange[timestep]: "Thermal"})
-
-        busRenewable = gl.busRenewableStore[['Bus ID',daterange[timestep]]]
-        busRenewable = busRenewable.astype({'Bus ID': 'int64', daterange[timestep]:'float64'})
-        busRenewable = busRenewable.rename(columns={daterange[timestep]: "Renewable"})
-
-        # Append the data to the geometry data
-        busMapData = pd.merge(busLoss, bus, on='Bus ID')
-        busMapData = pd.merge(busThermal, busMapData, on='Bus ID')
-        busMapData = pd.merge(busRenewable, busMapData, on='Bus ID')
-
-        # lossColor = {"scale":{"type":colorMaps['whiteRed']['scale'],
-        #              "range": colorMaps['whiteRed']['rangeRGB'],
-        #              "domain": busLossExtents,
-        #              "value": "Loss",
-        #             }}
-        # thermalColor = {"scale":{"type":colorMaps["blu"]['scale'],
-        #                 "range": colorMaps["blu"]['rangeRGB'],
-        #                 "domain": busThermalExtents,
-        #                 "value": "Thermal",
-        #                 }}
-        # renewableColor = {"scale":{"type":colorMaps['grn']['scale'],
-        #                   "range": colorMaps['grn']['rangeRGB'],
-        #                   "domain": busRenewableExtents,
-        #                   "value": "Renewable",
-        #               }}
-
-
-
-
-        renewableScatterLayer = {
-            "type": "ScatterplotLayer",
-            "id": 'scatterplot-layer-renewable',
-            "data": busMapData.to_dict(orient='records'),
-            "pickable": False,
-            "opacity": .25,
-            "stroked": True,
-            "filled": True,
-            "radiusScale": 50,
-            "lineWidthScale": 25,
-            "radiusMinPixels": 0,
-            "lineWidthMinPixels": 0,
-            "getPosition": "function(d){return [d['lng'], d['lat']]}",
-
-            #"getRadius": "function(d){return d['Loss']}",
-            #"getRadius": "function(d){return d['Thermal']}",
-            "getRadius": "function(d){return d['Renewable']}",
-
-            #"getLineWidth": "function(d){return d['Loss']}",
-            #"getLineWidth": "function(d){return d['Thermal']}",
-            "getLineWidth": "function(d){return d['Renewable']}",
-
-            #"getLineColor": lossColor,
-            "getLineColor": renewableColor,
-            #"getLineColor": renewableColor,
-
-            #"getFillColor": lossColor,
-            #"getFillColor": thermalColor,
-            "getFillColor": renewableColor,
-        }
-        mapLayers.append(renewableScatterLayer)
-
-
-        thermalScatterLayer = {
-            "type": "ScatterplotLayer",
-            "id": 'scatterplot-layer-thermal',
-            "data": busMapData.to_dict(orient='records'),
-            "pickable": False,
-            "opacity": .25,
-            "stroked": True,
-            "filled": True,
-            "radiusScale": 50,
-            "lineWidthScale": 25,
-            "radiusMinPixels": 0,
-            "lineWidthMinPixels": 0,
-            "getPosition": "function(d){return [d['lng'], d['lat']]}",
-
-            #"getRadius": "function(d){return d['Loss']}",
-            "getRadius": "function(d){return d['Thermal']}",
-            #"getRadius": "function(d){return d['Renewable']}",
-
-            #"getLineWidth": "function(d){return d['Loss']}",
-            "getLineWidth": "function(d){return d['Thermal']}",
-            #"getLineWidth": "function(d){return d['Renewable']}",
-
-            #"getLineColor": lossColor,
-            "getLineColor": thermalColor,
-            #"getLineColor": renewableColor,
-
-            #"getFillColor": lossColor,
-            #"getFillColor": thermalColor,
-            "getFillColor": thermalColor,
-        }
-        mapLayers.append(thermalScatterLayer)
-
-
-        scatterLayer = {
-            "type": "ScatterplotLayer",
-            "id": 'scatterplot-layer2',
-            "data": busMapData.to_dict(orient='records'),
-            "pickable": False,
-            "opacity": 0.5,
-            "stroked": True,
-            "filled": True,
-            "radiusScale":50,
-            "lineWidthScale": 25,
-            "radiusMinPixels": 5,
-            "lineWidthMinPixels": 0,
-            "getPosition": "function(d){return [d['lng'], d['lat']]}",
-
-            "getRadius": "function(d){return d['Loss']}",
-            #"getRadius": "function(d){return d['Thermal']}",
-            #"getRadius": "function(d){return d['Renewable']}",
-
-            "getLineWidth": "function(d){return d['Loss']}",
-            #"getLineWidth": "function(d){return d['Thermal']}",
-            #"getLineWidth": "function(d){return d['Renewable']}",
-
-            #"getLineColor": [0,0,0],
-            #"getLineColor": [227,26,28],#lossColor,
-            "getLineColor": "function(d){ let color = d['Loss']==0 ? [248, 248, 255] : [227,26,28]; return color}",#lossColor,
-            #"getLineColor": thermalColor,
-            #"getLineColor": renewableColor,
-
-            #"getFillColor": [227,26,28],
-            "getFillColor": "function(d){ let color = d['Loss']==0 ? [248, 248, 255] : [227,26,28]; return color}",
-
-            #if d['Loss'] == 0 return return d['Thermal']}",#lossColor,
-            #"getFillColor": thermalColor,
-            #"getFillColor": renewableColor
-        }
-        mapLayers.append(scatterLayer)
-
-        # Set the map legend
-        # layers={
-        #     'type': "colorLegend",
-        #     'id': "dataLayer",
-        #     'value': "thermal",
-        #     'title': "Thermal",
-        #     'position': [0,0],
-        #     "colorMap": thermalColor
-        # }
-        # legendLayers.append(layers);
-
-
-    # If we haven't generated layers, push the initial layers
-    if(len(mapLayers) == 0):
-        mapLayers = initialLayers
-
-
-    return mapLayers#,legendLayers
+# @app.callback(Output("network-map", "layers"),
+#               #Output("mapLegend","layers")],
+#               [Input('timestep', 'data'),
+#                Input('busFile', 'data'),
+#                #Input('branchFile', 'data')
+#                ],
+#               [#State('busFile', 'data'),
+#                #State('branchFile', 'data'),
+#                #State('busVariable', 'data'),
+#                #State('branchVariable', 'data'),
+#                #State('busDataColor', 'data'),
+#                #State('branchDataColor', 'data'),
+#                State('busLossExtents', 'data'),
+#                State('busThermalExtents', 'data'),
+#                State('busRenewableExtents', 'data')],
+#               prevent_initial_call=True)
+# def createMap(timestep, busFile, busLossExtents, busThermalExtents, busRenewableExtents):
+#     #branchFile, busFileState, branchFileState, busVariable, branchVariable, busColor, branchColor,):
+#     #print("update map",timestep, busVariable, branchFile, busFileState, branchFileState)
+#
+#     #print(busFile)
+#
+#     if(timestep == None):
+#         raise PreventUpdate()
+#
+#     #print(daterange[timestep])
+#     # Create the map (and legend) layers
+#     mapLayers=[]
+#     legendLayers=[]
+#
+#     # If we have branch data
+#     # if(branchFile != None):
+#     #
+#     #     # Grab the current timeste of the bus data
+#     #     branchData = gl.branchDataStore.loc[gl.branchDataStore['DateTime'] == timeSteps[timestep]].values[0].tolist()
+#     #     branchData.pop(0) # (remove the timestamp)
+#     #
+#     #     # Append the data to the geometry data
+#     #     branchMapData = branch
+#     #     branchMapData[branchVariable] = branchData
+#     #
+#     #     # Get the extent of the data
+#     #     branchExtents = [min(branchData), max(branchData)]
+#     #
+#     #     #colorscales = px.colors.named_colorscales()
+#     #     #print("colors?" , colorscales)
+#     #     #plotly.colors.colorscale_to_colors(colorscales[0])
+#     #     #print(px.colors.sequential.Plasma)
+#     #
+#     #     lineLayer = {
+#     #         "type": "LineLayer",
+#     #         "id": 'line-layer',
+#     #         "data": branchMapData.to_dict(orient='records'),
+#     #         "pickable": False,
+#     #         "opacity": 0.8,
+#     #         "widthScale": 1,
+#     #         "widthMinPixels":1,
+#     #         "widthMaxPixels":5,
+#     #         "getWidth": "function(d){return d['"+branchVariable+"']}",
+#     #         "getSourcePosition": "function(d){return d['fromPos']}",
+#     #         "getTargetPosition": "function(d){return d['toPos']}" ,
+#     #         "getColor": {"scale":{"type":colorMaps['branch']['scale'],
+#     #                               "range":  colorMaps['branch']['rangeRGB'],
+#     #                               "domain": branchExtents,
+#     #                               "value": branchVariable,
+#     #                              }}
+#     #
+#     #
+#     #     }
+#     #     mapLayers[0] = lineLayer
+#
+#     # If we have bus data
+#     if(busFile != None):
+#
+#         # Grab the current timestep of the bus data, rename column to the variable name
+#         mapLayers.append(initialLayers[0])
+#         mapLayers.append(initialLayers[1])
+#
+#         if(not gl.busLossStore.empty):
+#             busLoss = gl.busLossStore[['Bus ID',daterange[timestep]]]
+#             busLoss = busLoss.astype({'Bus ID': 'int64', daterange[timestep]:'float64'})
+#             busLoss = busLoss.rename(columns={daterange[timestep]: "Loss"})
+#             #print(busLoss)
+#
+#         #print("gl", gl.busThermalStore)
+#         if(not gl.busThermalStore.empty):
+#             busThermal= gl.busThermalStore[['Bus ID',daterange[timestep]]]
+#             busThermal = busThermal.astype({'Bus ID': 'int64', daterange[timestep]:'float64'})
+#             busThermal = busThermal.rename(columns={daterange[timestep]: "Thermal"})
+#
+#         busRenewable = gl.busRenewableStore[['Bus ID',daterange[timestep]]]
+#         busRenewable = busRenewable.astype({'Bus ID': 'int64', daterange[timestep]:'float64'})
+#         busRenewable = busRenewable.rename(columns={daterange[timestep]: "Renewable"})
+#
+#         # Append the data to the geometry data
+#         busMapData = pd.merge(busLoss, bus, on='Bus ID')
+#         busMapData = pd.merge(busThermal, busMapData, on='Bus ID')
+#         busMapData = pd.merge(busRenewable, busMapData, on='Bus ID')
+#
+#         # lossColor = {"scale":{"type":colorMaps['whiteRed']['scale'],
+#         #              "range": colorMaps['whiteRed']['rangeRGB'],
+#         #              "domain": busLossExtents,
+#         #              "value": "Loss",
+#         #             }}
+#         # thermalColor = {"scale":{"type":colorMaps["blu"]['scale'],
+#         #                 "range": colorMaps["blu"]['rangeRGB'],
+#         #                 "domain": busThermalExtents,
+#         #                 "value": "Thermal",
+#         #                 }}
+#         # renewableColor = {"scale":{"type":colorMaps['grn']['scale'],
+#         #                   "range": colorMaps['grn']['rangeRGB'],
+#         #                   "domain": busRenewableExtents,
+#         #                   "value": "Renewable",
+#         #               }}
+#
+#
+#
+#
+#         renewableScatterLayer = {
+#             "type": "ScatterplotLayer",
+#             "id": 'scatterplot-layer-renewable',
+#             "data": busMapData.to_dict(orient='records'),
+#             "pickable": False,
+#             "opacity": .25,
+#             "stroked": True,
+#             "filled": True,
+#             "radiusScale": 50,
+#             "lineWidthScale": 25,
+#             "radiusMinPixels": 0,
+#             "lineWidthMinPixels": 0,
+#             "getPosition": "function(d){return [d['lng'], d['lat']]}",
+#
+#             #"getRadius": "function(d){return d['Loss']}",
+#             #"getRadius": "function(d){return d['Thermal']}",
+#             "getRadius": "function(d){return d['Renewable']}",
+#
+#             #"getLineWidth": "function(d){return d['Loss']}",
+#             #"getLineWidth": "function(d){return d['Thermal']}",
+#             "getLineWidth": "function(d){return d['Renewable']}",
+#
+#             #"getLineColor": lossColor,
+#             "getLineColor": renewableColor,
+#             #"getLineColor": renewableColor,
+#
+#             #"getFillColor": lossColor,
+#             #"getFillColor": thermalColor,
+#             "getFillColor": renewableColor,
+#         }
+#         mapLayers.append(renewableScatterLayer)
+#
+#
+#         thermalScatterLayer = {
+#             "type": "ScatterplotLayer",
+#             "id": 'scatterplot-layer-thermal',
+#             "data": busMapData.to_dict(orient='records'),
+#             "pickable": False,
+#             "opacity": .25,
+#             "stroked": True,
+#             "filled": True,
+#             "radiusScale": 50,
+#             "lineWidthScale": 25,
+#             "radiusMinPixels": 0,
+#             "lineWidthMinPixels": 0,
+#             "getPosition": "function(d){return [d['lng'], d['lat']]}",
+#
+#             #"getRadius": "function(d){return d['Loss']}",
+#             "getRadius": "function(d){return d['Thermal']}",
+#             #"getRadius": "function(d){return d['Renewable']}",
+#
+#             #"getLineWidth": "function(d){return d['Loss']}",
+#             "getLineWidth": "function(d){return d['Thermal']}",
+#             #"getLineWidth": "function(d){return d['Renewable']}",
+#
+#             #"getLineColor": lossColor,
+#             "getLineColor": thermalColor,
+#             #"getLineColor": renewableColor,
+#
+#             #"getFillColor": lossColor,
+#             #"getFillColor": thermalColor,
+#             "getFillColor": thermalColor,
+#         }
+#         mapLayers.append(thermalScatterLayer)
+#
+#
+#         scatterLayer = {
+#             "type": "ScatterplotLayer",
+#             "id": 'scatterplot-layer2',
+#             "data": busMapData.to_dict(orient='records'),
+#             "pickable": False,
+#             "opacity": 0.5,
+#             "stroked": True,
+#             "filled": True,
+#             "radiusScale":50,
+#             "lineWidthScale": 25,
+#             "radiusMinPixels": 5,
+#             "lineWidthMinPixels": 0,
+#             "getPosition": "function(d){return [d['lng'], d['lat']]}",
+#
+#             "getRadius": "function(d){return d['Loss']}",
+#             #"getRadius": "function(d){return d['Thermal']}",
+#             #"getRadius": "function(d){return d['Renewable']}",
+#
+#             "getLineWidth": "function(d){return d['Loss']}",
+#             #"getLineWidth": "function(d){return d['Thermal']}",
+#             #"getLineWidth": "function(d){return d['Renewable']}",
+#
+#             #"getLineColor": [0,0,0],
+#             #"getLineColor": [227,26,28],#lossColor,
+#             "getLineColor": "function(d){ let color = d['Loss']==0 ? [248, 248, 255] : [227,26,28]; return color}",#lossColor,
+#             #"getLineColor": thermalColor,
+#             #"getLineColor": renewableColor,
+#
+#             #"getFillColor": [227,26,28],
+#             "getFillColor": "function(d){ let color = d['Loss']==0 ? [248, 248, 255] : [227,26,28]; return color}",
+#
+#             #if d['Loss'] == 0 return return d['Thermal']}",#lossColor,
+#             #"getFillColor": thermalColor,
+#             #"getFillColor": renewableColor
+#         }
+#         mapLayers.append(scatterLayer)
+#
+#         # Set the map legend
+#         # layers={
+#         #     'type': "colorLegend",
+#         #     'id': "dataLayer",
+#         #     'value': "thermal",
+#         #     'title': "Thermal",
+#         #     'position': [0,0],
+#         #     "colorMap": thermalColor
+#         # }
+#         # legendLayers.append(layers);
+#
+#
+#     # If we haven't generated layers, push the initial layers
+#     if(len(mapLayers) == 0):
+#         mapLayers = initialLayers
+#
+#
+#     return mapLayers#,legendLayers
 
 
 if __name__ == '__main__':
