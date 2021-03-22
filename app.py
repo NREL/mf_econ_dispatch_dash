@@ -31,7 +31,7 @@ import math
 # Read in the data and do some initial processing
 
 # Set the path to the data
-DATA_PATH = pathlib.Path(__file__).parent.joinpath("../../../data/graphs").resolve()
+DATA_PATH = pathlib.Path(__file__).parent.joinpath("./data").resolve()
 SCENARIO_PATH = DATA_PATH.joinpath("50Scen_3days 2")
 
 # Read in the network
