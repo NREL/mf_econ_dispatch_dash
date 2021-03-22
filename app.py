@@ -34,6 +34,8 @@ import math
 DATA_PATH = pathlib.Path(__file__).parent.joinpath("./data").resolve()
 SCENARIO_PATH = DATA_PATH.joinpath("50Scen_3days 2")
 
+print("DATAPATH", DATA_PATH)
+
 # Read in the network
 bus = pd.read_csv(DATA_PATH.joinpath("RTS/bus.csv"))
 bus = bus[['Bus ID','lat','lng']]
