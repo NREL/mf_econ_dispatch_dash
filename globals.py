@@ -9,3 +9,9 @@ actualsStore = None
 
 # The full branch dataframe
 branchDataStore = None
+
+# The bus data
+bus = None
+
+# The branch data
+branch = None

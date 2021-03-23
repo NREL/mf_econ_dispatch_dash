@@ -11,8 +11,10 @@ def setSummaryData(data):
 def setActualsData(data):
     globals.actualsStore = data
 
-
-
-
 def setBranchData(data):
     globals.branchDataStore = data
+
+def setBranch(data):
+    globals.branch = data
+def setBus(data):
+    globals.bus = data
