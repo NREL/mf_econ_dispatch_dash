@@ -1,5 +1,4 @@
 --extra-index-url=https://plotly.nrel.gov/Docs/packages
-dash-design-kit==1.5.4
 dash==1.19.0
 gunicorn==19.9.0
 nrel_dash_components-0.0.1.tar.gz
