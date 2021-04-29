@@ -1002,7 +1002,7 @@ def createMap(timestep, runsFile, basicsFile, compareFile, showMode, modeState):
                 "getRadius": "function(d){return d['GenMWMax']}",
                 "getLineWidth":2,
                 "getLineColor": [47, 79, 79],
-                "getFillColor": [218, 165, 32],
+                "getFillColor":"function(d){ let color = d['GenMWMax']==0 ? [31,120,180] : [178,223,138]; return color}",
             }
             mapLayers.append(scatterLayer)
         else:
