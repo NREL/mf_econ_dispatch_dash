@@ -11,10 +11,13 @@ def setSummaryData(data):
 def setActualsData(data):
     globals.actualsStore = data
 
-def setBranchData(data):
-    globals.branchDataStore = data
+def setBasicsData(data):
+    globals.basicsStore = data
+def setCompareData(data):
+    globals.compareStore = data
 
-def setBranch(data):
-    globals.branch = data
-def setBus(data):
-    globals.bus = data
+def setLeftPlotData(data):
+    globals.leftPlotStore = data
+
+def setRightPlotData(data):
+    globals.rightPlotStore = data

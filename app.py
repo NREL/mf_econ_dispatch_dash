@@ -1,5 +1,6 @@
 import dash
 import dash_core_components as dcc
+import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
@@ -21,6 +22,7 @@ import datetime
 import globalsUpdater as gu
 import globals as gl
 import math
+import defines as dn
 
 #-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-#
 # Initialization
@@ -39,9 +41,6 @@ bus = bus[['Bus ID','lat','lng']]
 branch = pd.read_csv(DATA_PATH.joinpath("RTS/branch.csv"))
 branch = branch[['UID','From Bus','To Bus']]
 #gen = pd.read_csv(DATA_PATH.joinpath("RTS/gen.csv"))
-
-#print(bus)
-#sys.exit()
 
 # Process the branch data
 fromPos = []
@@ -67,14 +66,6 @@ listOfSummaryResults = list(map(lambda st: str.replace(st, ".csv", ""), res))
 summary =  pd.read_csv(SCENARIO_PATH.joinpath("ac_results.csv"))
 timeSteps = summary['DateTime'].to_list()
 daterange = timeSteps
-
-
-# daterange = []
-# for d in timeSteps:
-#     splitT = d.split("T")
-#     split = splitT[1].split(":")
-#     time = splitT[0]+" "+split[0]+":"+split[1]
-#     daterange.append(time)
 
 # ----------------------------------------------------------- #
 # Create the initial map state
@@ -117,220 +108,239 @@ lineLayer = {
 }
 initialLayers = [lineLayer,scatterLayer]
 
-# ----------------------------------------------------------- #
-# Define labels and colors
-scenarioDirs = {'details50_AC_72hrs':{"label":"AC OPF", "summary":"ac_results.csv"},
-                'details50_DC_72hrs':{"label":"DC OPF", "summary":"dc_results.csv"},
-                'details50_CP_72hrs':{"label":"Copper Plate OPF (Real power only)", "summary":"cp_results.csv"},
-                'details50_ACCP_72hrs':{"label":"Multi-Fidelity AC-CP OPF", "summary":"mf_ACCP_results.csv"},
-                'details50_DCCP_72hrs':{"label":"Multi-Fidelity DC-CP OPF", "summary":"mf_DCCP_results.csv"},
-                'details50_cp_ac_conseq':{"label":"Copper Plate with AC recourse (Includes reactive power)", "summary":"cp_ac_actuals_results.csv"},
-                'details50_cp_dc_conseq':{"label":"Copper Plate with DC recourse (Real power only)", "summary":"cp_dc_actuals_results.csv"}}
-busVariableFiles = {'real_loss_of_load.csv':{'title':'Real Loss of Load','color':'whiteRed', 'process':False},
-                    'real_thermal_set_points_processed.csv':{'title':'Real Thermal Set Points','color':'whiteRed', 'process':True},
-                    'real_renewable_setpoints_processed.csv':{'title':'Real Renewable Setpoints','color':'whiteRed', 'process':True},
-
-                    # Possibly of interest later
-                    #'real_bus_voltage_angle.csv':{'title':'Real Bus Voltage Angle', 'color':'whiteRed', 'process':False},
-                    #'real_bus_voltage_magnitude.csv':{'title':'Real Bus Voltage Magnitude', 'color':'whiteRed', 'process':False},
-                    #'reactive_thermal_set_points.csv':{'title':'Reactive Thermal Set Points','color':'whiteRed', 'process':True},
-                    #'real_renewable_spill.csv':{'title':'Real Renewable Spill','color':'whiteRed', 'process':False},
-
-                    # Zeros
-                    #'reactive_loss_of_load.csv':{'title':'Reactive Loss of Load','color':'whiteRed', 'process':False},
-                    #'real_overload.csv':{'title':'Real Overload','color':'whiteRed', 'process':False},
-                    #'reactive_overload.csv':{'title':'Reactive Overload','color':'whiteRed', 'process':False},
-                    # Debugging (ignore)
-                    #'expected_Pth.csv':{'title':'Expected Pth','color':'cvidis', 'process':'false'},
-
-                  }
-branchVariableFiles ={'real_branch_power_flow.csv':{'title':'Real Branch Power Flow','color':'whiteRed'}}
-
-# Color ranges for the different variables
-colorMaps = {
-    "whiteRed":{
-        "range": [[248, 248, 255],[255,69,0]],
-        "rangeRGB": ['rgb(248,248,255)','rgb(255, 69, 0)'],
-        "scale": "linear"
-    },
-    "blackRed":{
-        "range": [[0, 0, 0],[255,69,0]],
-        "rangeRGB": ['rgb(0,0,0)','rgb(255, 69, 0)'],
-        "scale": "linear"
-    },
-    "tealBlu":{
-        "range": [[127, 255, 212],[72, 61, 139]],
-        "rangeRGB": ['rgb(127, 255, 212)','rgb(72, 61, 139)'],
-        "scale": "linear"
-    },
-    "blu":{
-        "range": [[230, 247, 255],[0, 85, 128]],
-        "rangeRGB": ['rgb(230, 247, 255)','rgb(0, 85, 128)'],
-        "scale": "linear"
-    },
-    "grn":{
-        "range": [[236, 249, 242],[45, 134, 89]],
-        "rangeRGB": ['rgb(236, 249, 242)','rgb(45, 134, 89)'],
-        "scale": "linear"
-    },
-    "geojson" : {
-        "range": [[166,97,26],[223,194,125],[255,255,255],[128,205,193],[1,133,113]],
-        "rangeRGB": ['rgb(166,97,26)','rgb(223,194,125)','rgb(255,255,255)','rgb(128,205,193)','rgb(1,133,113)'],
-        "scale": "diverging"
-    },
-    "ploygon": {
-        "range": [[255,255,212],[254,227,145],[254,196,79],[254,153,41],[236,112,20],[204,76,2],[140,45,4]],
-        "rangeRGB": ['rgb(255,255,212)','rgb(254,227,145)','rgb(254,196,79)','rgb(254,153,41)','rgb(236,112,20)','rgb(204,76,2)','rgb(140,45,4)'],
-        "scale" : "quantize"
-    },
-    "bus":{
-        "range": [[0,255,0],[254,0,0]],
-        "rangeRGB": ['rgb(0,255,0)','rgb(254,0,0)'],
-        "scale" : "linear"
-    },
-    "branch":{
-        "range": [[255,0,0],[0,0,255]],
-        "rangeRGB": ['rgb(255,0,0)','rgb(0,0,255)'],
-        "scale" : "linear"
-    }
-}
-
-renewableColor = [51,160,44]
-renewableHex ='#33A02C'
-thermalColor = [31,120,180]
-thermalHex = '#1F78B4'
-lossColor = [227,26,28]
-lossHex = '#E31A1C'
-
-
-# ----------------------------------------------------------- #
-# Time helper functions
-def unixTimeMillis(dt):
-    ''' Convert datetime to unix timestamp '''
-    return int(time.mktime(dt.timetuple()))
-def unixToDatetime(unix):
-    ''' Convert unix timestamp to datetime. '''
-    return pd.to_datetime(unix,unit='s')
-
-# Returns the marks for labeling the slider
-def getMarks():
-    result = {}
-    for i in range(0, len(timeSteps), 216):
-        result[i] = pd.to_datetime(timeSteps[i]).strftime("%D:%H:%M:%S")
-    return result
-
 #-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-#
 # Layout
 #-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-#
 
 #------------------------------------------------#
 # Create app and layout
-app = dash.Dash(__name__, title='RTS', update_title='RTS')
+app = dash.Dash(__name__, title='RTS', update_title='', external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server  # expose server variable for Dash server deployment
 app.layout =  ndc.NRELApp(
-     appName="RTS Grid Vis",
+     appName="Multi-Fidelity Economic Dispatch Visualizations",
      description="",
      children=[
-        dcc.Store(id='directory', storage_type='memory'),
-        dcc.Store(id='busFile', storage_type='memory'),
-        dcc.Store(id='busLossExtents', storage_type='memory'),
-        dcc.Store(id='busThermalExtents', storage_type='memory'),
-        dcc.Store(id='busRenewableExtents', storage_type='memory'),
-        dcc.Store(id='summaryExtents', storage_type='memory'),
-        dcc.Store(id='branchFile', storage_type='memory'),
+        dcc.Store(id='mode', storage_type='memory'),
+        dcc.Store(id='runsFile', storage_type='memory'),
+        dcc.Store(id='compareFile', storage_type='memory'),
+        dcc.Store(id='basicsFile', storage_type='memory'),
         dcc.Store(id='timestep', storage_type='memory'),
-        dcc.Store(id='busVariable', storage_type='memory'),
-        dcc.Store(id='branchVariable', storage_type='memory'),
-        dcc.Store(id='busDataColor', storage_type='memory'),
-        dcc.Store(id='branchDataColor', storage_type='memory'),
+        dcc.Store(id='summaryExtents', storage_type='memory'),
         dcc.Interval(
             id='time-interval',
             interval=1*100, # in milliseconds
             n_intervals=0
         ),
         html.Hr(),
-        html.Div(className='section', children=[
-            html.Div(className='tile is-ancestor', children=[
-                # Left UI tiles
-                #html.Div(className='tile is-parent is-vertical is-2 uiDivs', children=[
+        html.Div(className='columns', children=[
+            html.Div(className='column is-one-quarter notification', children=[
+                    dbc.Button("Investigate Power Flow Runs", id="scenario-fade-button", className="mb-3"),
+                    dbc.Fade(
+                        dbc.Card(
+                            dbc.CardBody(children=[
+                                html.H4("Select Run to Explore", className="card-title"),
+                                #html.P("Choose a scenario, results ", className="card-text"),
+                                # Left UI tiles
+                                html.Div(className='tile is-parent is-vertical is-12', children=[
+                                    #html.P(className="title is-size-6", children=["Power Flow Scenario:"]),
+                                    html.Div(className="subtitle", children=[
+                                        dcc.Dropdown(
+                                            id="scenario-dropdown",
+                                            style={"fontSize": "14px"},
+                                            options=[{ "label": dn.scenarioDirs[i]["label"], "value": i} for i in dn.scenarioDirs.keys()],
+                                        ),
+                                    ]),
+                                ]),
+                            ])
+                        ),
+                        id="scenario-fade",
+                        is_in=True,
+                        appear=False,
+                        className="mb-3",
+                    ),
+                    dbc.Button("Compare Power Flow Runs", id="comparison-fade-button", className="mb-3"),
+                    dbc.Fade(
+                        dbc.Card(
+                            dbc.CardBody(children=[
 
-                #]),
-                # Right Vis tiles
-                html.Div(className='tile is-parent is-vertical is-12', children=[
-                    #html.Article(className='tile is-child', children=[
-                        html.P(className="title is-size-6", children=["Power Flow Scenario:"]),
-                        html.Div(className="subtitle", children=[
-                            dcc.Dropdown(
-                                id="scenario-dropdown",
-                                style={"fontSize": "14px"},
-                                options=[{ "label": scenarioDirs[i]["label"], "value": i} for i in scenarioDirs.keys()],
-                            ),
-                        ]),
-                        # html.P(className="title is-size-6", children=["Bus Variable:"]),
-                        # html.Div(className="subtitle", children=[
-                        #     dcc.Dropdown(
-                        #         id="bus-variable-dropdown",
-                        #         style={"fontSize": "14px"},
-                        #     ),
-                        # ]),
-                        # html.P(className="title is-size-6", children=["Branch Variable:"]),
-                        # html.Div(className="subtitle", children=[
-                        #     dcc.Dropdown(
-                        #         id="branch-variable-dropdown",
-                        #         style={"fontSize": "14px"},
-                        #     ),
-                        # ]),
-                    #]),
-                    # Slider tile
-                    html.Div(className='tile is-child', children=[
-                        html.Div(className="tile is-child", children=[
-                            html.Button('Stop', id='stop-val', n_clicks=0, disabled=True),
-                            html.Button('Play', id='play-val', n_clicks=0),
-                            html.P(id="slider-val", children=[])
-                        ]),
-                        html.Div(className="tile is-child", children=[
-                            dcc.Slider(
-                                id='time-slider',
-                                min = 0,
-                                max = len(timeSteps),
-                                value = 0,
-                                marks=getMarks(),
-                                updatemode='drag'
-                            ),
-                        ]),
-                    ]),
-                    # Map tile
-                    html.Div(className='tile is-child' , children=[
-                        html.Div(className='tile is-dark mapDiv', children=[
-                            dgl.DeckglLy(id='network-map',
-                                mapboxtoken="pk.eyJ1Ijoia3BvdHRlciIsImEiOiJCNFlOLWVnIn0.IdEiAEoZbboAuuqOYtWg0w",
-                                mapStyle="mapbox://styles/kpotter77/ck6ct8e2w0o1o1imrq0runboi",
-                                viewState = viewState,
-                                layers=initialLayers
-                            ),
-                          ])
-                    ]),
-                    # Feeder graph tile
-                    html.Div(className='tile is-child', children=[
-                        html.Article(className='tile', children=[
-                            dcc.Graph(id="timeseries-cost",
-                                       config={'displayModeBar': False}),
-                            #dcc.Graph(id="timeseries-cost-2",
-                            #          config={'displayModeBar': False}),
-                            dcc.Graph(id="timeseries-load",
-                                       config={'displayModeBar': False}),
-                        ])
+                                html.H4("Choose runs for comparison.", className="card-text"),
 
-                    ])
-                ]),
+
+                                html.P(className="title is-size-6", children=["Scenario 1:"]),
+                                html.Div(className="subtitle", children=[
+                                    dcc.Dropdown(
+                                        id="scenario-1-dropdown",
+                                        style={"fontSize": "14px"},
+                                        options=[{ "label": dn.scenarioDirs[i]["label"], "value": i} for i in dn.scenarioDirs.keys()],
+                                    ),
+                                ]),
+                                html.P(className="title is-size-6", children=["Scenario 2:"]),
+                                html.Div(className="subtitle", children=[
+                                    dcc.Dropdown(
+                                        id="scenario-2-dropdown",
+                                        style={"fontSize": "14px"},
+                                        options=[{ "label": dn.scenarioDirs[i]["label"], "value": i} for i in dn.scenarioDirs.keys()],
+                                    ),
+                                ]),
+                                html.P("Choose a map comparison operator and a variable."),
+                                html.P(className="title is-size-6", children=["Operator:"]),
+                                html.Div(className="subtitle", children=[
+                                    dcc.Dropdown(
+                                        id="operator-dropdown",
+                                        style={"fontSize": "14px"},
+                                        options=[{ "label": 'overlay', "value": 0}, { "label": 'difference', "value": 1}],
+                                    ),
+                                ]),
+
+                                html.P(className="title is-size-6", children=["Map Variable:"]),
+                                html.Div(className="subtitle", children=[
+                                    dcc.Dropdown(
+                                        id="variable-dropdown",
+                                        style={"fontSize": "14px"},
+                                        options=[{ "label": dn.detailsFiles[i]["label"], "value": i} for i in dn.detailsFiles.keys()],
+                                    ),
+                                ]),
+                                html.P("Choose variables to show on the left and right plots."),
+                                html.P(className="title is-size-6", children=["Left Plot Variable:"]),
+                                html.Div(className="subtitle", children=[
+                                    dcc.Dropdown(
+                                        id="left-variable-dropdown",
+                                        style={"fontSize": "14px"},
+                                        options=[{ "label": dn.detailsVars[i]["label"], "value": i} for i in dn.detailsVars.keys()],
+                                    ),
+                                ]),
+                                html.P(className="title is-size-6", children=["Right Plot Variable:"]),
+                                html.Div(className="subtitle", children=[
+                                    dcc.Dropdown(
+                                        id="right-variable-dropdown",
+                                        style={"fontSize": "14px"},
+                                        options=[{ "label": dn.detailsVars[i]["label"], "value": i} for i in dn.detailsVars.keys()],
+                                    ),
+                                ]),
+                            ])
+                        ),
+                        id="comparison-fade",
+                        is_in=False,
+                        appear=False,
+                        className="mb-3",
+                    ),
+                    dbc.Button("Display Basic Info", id="basics-fade-button", className="mb-3"),
+                    dbc.Fade(
+
+                        dbc.Card(
+                            dbc.CardBody(children=[
+                                html.H4("Select data to show on the grid.", className="card-title"),
+                                #html.P("Directions on how to use these tools", className="card-text"),
+
+                                #html.P(className="title is-size-6", children=["Select Data to Show on Grid:"]),
+                                html.Div(className="subtitle", children=[
+                                    dcc.Dropdown(
+                                        id="basics-dropdown",
+                                        style={"fontSize": "14px"},
+                                        options=[{ "label":"Maximal Wind Generation", "value": 0}],
+                                    ),
+                                ]),
+                            ])
+                        ),
+                        id="basics-fade",
+                        is_in=False,
+                        appear=False,
+                        className="mb-3",
+                    ),
             ]),
+            html.Div(className='column is-one-half', children=[
+            # Right Vis tiles
+            html.Div(className='tile is-parent is-vertical is-12', children=[
+                # Slider tile
+                html.Div(className='tile is-child', id="timeDiv", children=[
+                    html.Div(className="tile", children=[
+                        dbc.Button('Stop', id='stop-val', className="mr-1 mb-2", color="danger", size="sm", outline=True,n_clicks=0, disabled=True),
+                        dbc.Button('Play', id='play-val', className="mr-1 mb-2", color="dark", size="sm", outline=True,n_clicks=0),
+                        html.P(className='tag is-large', id="slider-val", children=[]),
+                    ]),
 
+                    html.Div(className="tile is-child ml-3 pl-6", children=[
+                        dcc.Slider(
+                            id='time-slider',
+                            min = 0,
+                            max = len(timeSteps)+10,
+                            value = 0,
+                            marks=dn.getMarks(timeSteps),
+                            updatemode='drag',
+                            className="sliderSmall ml-3 pl-3"
+                        ),
+                    ]),
+                ]),
+                # Map tile
+                html.Div(className='tile is-child' , children=[
+                    html.Div(className='tile is-dark mapDiv', children=[
+                        dgl.DeckglLy(id='network-map',
+                            mapboxtoken="pk.eyJ1Ijoia3BvdHRlciIsImEiOiJCNFlOLWVnIn0.IdEiAEoZbboAuuqOYtWg0w",
+                            mapStyle="mapbox://styles/kpotter77/ck6ct8e2w0o1o1imrq0runboi",
+                            viewState = viewState,
+                            layers=initialLayers
+                        ),
+                      ])
+                ]),
+                # Graphs
+                html.Div(className='tile is-child', id='plotsDiv', children=[
+                    html.Article(className='tile', children=[
+                        dcc.Graph(id="left-chart", config={'displayModeBar': False}),
+                        dcc.Graph(id="right-chart", config={'displayModeBar': False}),
+                    ])
+                ])
+            ]),
         ])
- ])
+    ])
+])
 
 #-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-#
 # Callbacks
 #-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-#
+@app.callback(Output("mode", "data"),
+              Output("scenario-fade", "is_in"),
+              Output("comparison-fade", "is_in"),
+              Output("basics-fade", "is_in"),
+              Input("scenario-fade-button", "n_clicks"),
+              Input("comparison-fade-button", "n_clicks"),
+              Input("basics-fade-button", "n_clicks"),
+              State("scenario-fade", "is_in"),
+              State("comparison-fade", "is_in"),
+              State("basics-fade", "is_in"),
+             )
+def toggle_fade(scenario_n, comparison_n, basics_n, scenario_is_in, comparison_is_in, basics_is_in):
+
+    # Change outputs based on which input is triggered
+    ctx = dash.callback_context
+    triggered = ctx.triggered[0]['prop_id']
+
+    mode = None
+    scenario = scenario_is_in
+    comparison = comparison_is_in
+    basics = basics_is_in
+
+    if(triggered=="."):
+        mode = "scenario"
+
+    elif(triggered == "scenario-fade-button.n_clicks"):
+        basics = False
+        scenario = not scenario
+        comparison = not scenario
+        mode =  "scenario" if scenario else "comparison"
+
+    elif(triggered == "comparison-fade-button.n_clicks"):
+        scenario = False
+        comparison = not comparison
+        basics = not comparison
+        mode = "comparison" if comparison else "basics"
+
+    elif(triggered == "basics-fade-button.n_clicks"):
+        comparison = False
+        basics = not basics
+        scenario = not basics
+        mode = "basics" if basics else "scenario"
+
+    return mode, scenario, comparison, basics
 
 #------------------------------------------------#
 # Callback for playback
@@ -365,91 +375,40 @@ def updateSlider(intervalTick, playVal, timestep):
 #------------------------------------------------#
 # Callbacks to update time slider
 #------------------------------------------------#
-@app.callback([Output('timestep', 'data'),
-               Output('slider-val', 'children')],
-              [Input('time-slider', 'value')],
+@app.callback(Output('timestep', 'data'),
+              Output('slider-val', 'children'),
+              Input('time-slider', 'value'),
               prevent_initial_call=True)
 def updateTimestep(value):
     if(value >= len(timeSteps)):
-        return 0, ("   Timestep: "+str(timeSteps[len(timeSteps)-1]))
+        return 0, ("   Timestep: "+pd.to_datetime(timeSteps[len(timeSteps)-1]).strftime("%m/%d, %H:%M"))
     else:
-        return value, ("   Timestep: "+str(timeSteps[value]))
+        return value, ("   Timestep: "+pd.to_datetime(timeSteps[value]).strftime("%m/%d, %H:%M"))
 
 #------------------------------------------------#
-# Callbacks to update the scenario directory
+# Callbacks to update the runs data
 #------------------------------------------------#
-@app.callback(Output('directory', 'data'),
-               #Output('bus-variable-dropdown', 'options'),
-               #Output('branch-variable-dropdown', 'options'),
-               #Output('branch-variable-dropdown', 'disabled'),
-               #Output('branch-variable-dropdown', 'placeholder'),],
-              [Input('scenario-dropdown', 'value')],
+@app.callback(Output('runsFile','data'),
+              Output('summaryExtents', 'data'),
+              Input('scenario-dropdown', 'value'),
               prevent_initial_call=True)
-def updateScenarioDirectory(value):
-    if(value == None):
-        raise PreventUpdate()
+def updateRunsFile(directory):
 
-    branchDisabled = False
-    branchPlaceholder = "Select..."
+    haveData = False
 
-    # Get the list of data sets in this directory
-    dataFiles = glob.glob(str(SCENARIO_PATH.joinpath(value+"/*.csv")))
-
-    dataFiles.sort()
-    res = list(map(lambda st: str.replace(st, str(SCENARIO_PATH.joinpath(value+"/")), ""), dataFiles))
-    res = list(map(lambda st: str.replace(st, "/", ""), res))
-
-    # Find the bus or branch files that exist in the directory
-    busFiles = []
-    for i in res :
-        if(i in busVariableFiles):
-            busFiles.append(i)
-    branchFiles = []
-    for i in res :
-        if(i in branchVariableFiles):
-            branchFiles.append(i)
-
-    busOptions=[{ "label": busVariableFiles[i]['title'], "value": i } for i in busFiles]
-    branchOptions= [{ "label": branchVariableFiles[i]['title'], "value": i } for i in branchFiles]
-    if(len(branchOptions) == 0):
-        branchOptions =[{"label": "None", "value": 0}]
-        branchDisabled = True
-        branchPlaceholder = "None"
-
-    return value#, busOptions, branchOptions, branchDisabled, branchPlaceholder
-
-
-#------------------------------------------------#
-# Callbacks to update the bus file
-#------------------------------------------------#
-@app.callback([Output('busFile','data'),
-               Output('busLossExtents','data'),
-               Output('busThermalExtents','data'),
-               Output('busRenewableExtents','data'),
-               Output('summaryExtents', 'data')],
-              #[Input('bus-variable-dropdown', 'value')],
-              [Input('directory', 'data')],
-              prevent_initial_call=True)
-def updateBusFile(directory):
-
-    # Read in the data
-    #if(busFile != None):
-    # Read in the bus data, transpose and rename column headers
     # Read in the loss of load
-
     try:
         bdLoss = pd.read_csv(SCENARIO_PATH.joinpath(directory+"/"+"real_loss_of_load.csv")).T.reset_index()
         bdLoss.columns = bdLoss.iloc[0]
         bdLoss = bdLoss.rename(columns={"DateTime": 'Bus ID'})
         bdLoss = bdLoss.iloc[1:]
         gu.setBusLossData(bdLoss)
-        lossMin = bdLoss.loc[ : , bdLoss.columns != 'Bus ID']
-        busLossExtents = [lossMin.values.min(), lossMin.values.max()]
+        haveData = True
+
     except IOError:
         gu.setBusLossData(None)
-        busLossExtents = [0,1]
+        haveData = False
 
-    # Read in the bus data, transpose and rename column headers
     # Read in the thermal set points
     try:
         bdThermal = pd.read_csv(SCENARIO_PATH.joinpath(directory+"/"+"real_thermal_set_points_processed.csv")).T.reset_index()
@@ -457,460 +416,602 @@ def updateBusFile(directory):
         bdThermal = bdThermal.rename(columns={"DateTime": 'Bus ID'})
         bdThermal = bdThermal.iloc[1:]
         gu.setBusThermalData(bdThermal)
-        thermalMin = bdThermal.loc[ : , bdThermal.columns != 'Bus ID']
-        busThermalExtents = [thermalMin.values.min(), thermalMin.values.max()]
-        #print("Thermal", bdThermal.values.min(), bdThermal.values.max())
+        haveData = True
+
     except IOError:
         gu.setBusThermalData(None)
-        busThermalExtents = [0,1]
+        haveData = False
 
-    # Read in the bus data, transpose and rename column headers
     # Read in the renewable set points
-    bdRenewable = pd.read_csv(SCENARIO_PATH.joinpath(directory+"/"+"real_renewable_setpoints_processed.csv")).T.reset_index()
-    bdRenewable.columns = bdRenewable.iloc[0]
-    bdRenewable = bdRenewable.rename(columns={"DateTime": 'Bus ID'})
-    bdRenewable = bdRenewable.iloc[1:]
-    gu.setBusRenewableData(bdRenewable)
-    renewableMin = bdRenewable.loc[ : , bdRenewable.columns != 'Bus ID']
-    busRenewableExtents = [renewableMin.values.min(), renewableMin.values.max()]
+    try:
+        bdRenewable = pd.read_csv(SCENARIO_PATH.joinpath(directory+"/"+"real_renewable_setpoints_processed.csv")).T.reset_index()
+        bdRenewable.columns = bdRenewable.iloc[0]
+        bdRenewable = bdRenewable.rename(columns={"DateTime": 'Bus ID'})
+        bdRenewable = bdRenewable.iloc[1:]
+        gu.setBusRenewableData(bdRenewable)
+        haveData = True
+    except IOError:
+        gu.setBusRenewableData(None)
+        haveData = False
 
     # Read in the summary file
-    summaryFile = pd.read_csv(SCENARIO_PATH.joinpath(scenarioDirs[directory]['summary']))
-    summaryFile = summaryFile[['DateTime','ActLossLoad','ActOverLoad','ActRenew','ActSpill','ActFirstStageCost','ActSecondStageCost']]
-    gu.setSummaryData(summaryFile)
-    summaryMinCost = summaryFile[['ActFirstStageCost','ActSecondStageCost']]
-    summaryMinLoad = summaryFile[['ActLossLoad','ActOverLoad','ActRenew','ActSpill']]
-    #print(summaryMinCost.max())
-    summaryExtents ={"cost":[summaryMinCost.values.min(),summaryMinCost.values.max()], "load":[summaryMinLoad.values.min(), 3448.505510]}
+    try:
+        summaryFile = pd.read_csv(SCENARIO_PATH.joinpath(dn.scenarioDirs[directory]['summary']))
+        summaryFile = summaryFile[['DateTime','ActLossLoad','ActOverLoad','ActRenew','ActSpill','ActFirstStageCost','ActSecondStageCost']]
+        gu.setSummaryData(summaryFile)
+        summaryMinCost = summaryFile[['ActFirstStageCost','ActSecondStageCost']]
+        summaryMinLoad = summaryFile[['ActLossLoad','ActOverLoad','ActRenew','ActSpill']]
+        summaryExtents ={"cost":[summaryMinCost.values.min(),summaryMinCost.values.max()], "load":[summaryMinLoad.values.min(), 3448.505510]}
+        haveData = True
+    except IOError:
+        gu.setSummaryData(None)
+        haveData = False
 
     # Read in the actuals
-    actuals = pd.read_csv(SCENARIO_PATH.joinpath("actuals.csv"))
-    #print(actuals)
-    gu.setActualsData(actuals)
+    try:
+        actuals = pd.read_csv(SCENARIO_PATH.joinpath("actuals.csv"))
+        gu.setActualsData(actuals)
+        haveData = True
+    except IOError:
+        gu.setActualsData(None)
+        haveData = False
 
-
-    return True, busLossExtents, busThermalExtents, busRenewableExtents, summaryExtents#, True, True#busVariableFiles[busFile]['title'], busVariableFiles[busFile]['color']
-
+    return haveData, summaryExtents
 
 #------------------------------------------------#
-# Callbacks to update the branch file
+# Callbacks to update the basics data
 #------------------------------------------------#
-# @app.callback([Output('branchFile', 'data'),
-#                Output('branchVariable', 'data'),
-#                Output('branchDataColor', 'data')],
-#               [Input('branch-variable-dropdown', 'value')],
-#               [State('directory', 'data')],
-#               prevent_initial_call=True)
-# def updateBranchFile(branchFile, directory):
-#     # Read in the data
-#     if(branchFile != None):
-#         gu.setBranchData(pd.read_csv(SCENARIO_PATH.joinpath(directory+"/"+branchFile), dtype='float'))
-#         return True, branchVariableFiles[branchFile]['title'], branchVariableFiles[branchFile]['color']
-#     else:
-#         return False, None, None
+@app.callback(Output('basicsFile','data'),
+              Input('basics-dropdown','value'),
+              prevent_initial_call=True)
+def updateBasicsFile(value):
+
+    haveData = False
+
+    # The get the maximal generation values
+    if(value==0):
+        try:
+            maxFile = pd.read_csv(DATA_PATH.joinpath("RTS/maxGen.csv"))
+            merged = bus.merge(maxFile, on='Bus ID', how='left').fillna(0)
+            gu.setBasicsData(merged)
+            haveData = True
+        except IOError:
+            gu.setBasicsData(None)
+            haveData = False
+    return haveData
+
+#------------------------------------------------#
+# Callbacks to update the basics data
+#------------------------------------------------#
+@app.callback(Output('compareFile','data'),
+              Input('scenario-1-dropdown','value'),
+              Input('scenario-2-dropdown','value'),
+              Input('operator-dropdown', 'value'),
+              Input('variable-dropdown', 'value'),
+              Input('left-variable-dropdown', 'value'),
+              Input('right-variable-dropdown', 'value'),
+              prevent_initial_call=True)
+def updateCompareFile(scenario1, scenario2, operator, mapVar, leftVar, rightVar):
+
+    haveData = False
+
+    if(scenario1 != None) and (scenario2 != None) and (operator != None) and (mapVar != None) and (leftVar != None and rightVar != None):
+
+        try:
+            # Read in the two  runs
+            s1 = pd.read_csv(SCENARIO_PATH.joinpath(scenario1+"/"+mapVar)).T.reset_index()
+            s2 = pd.read_csv(SCENARIO_PATH.joinpath(scenario2+"/"+mapVar)).T.reset_index()
+
+            # Reset the indexes
+            s1.columns = s1.iloc[0]
+            s1 = s1.iloc[1:]
+            s1 = s1.rename(columns={"DateTime": 'Bus ID'})
+            s1.set_index('Bus ID', inplace=True, drop=True)
+
+            # Reset the indexes
+            s2.columns = s2.iloc[0]
+            s2 = s2.iloc[1:]
+            s2 = s2.rename(columns={"DateTime": 'Bus ID'})
+            s2.set_index('Bus ID', inplace=True, drop=True)
+
+            # If we have the overlay operator
+            if(operator == 0):
+                gu.setCompareData({'type':'overlay',
+                                   'data': {"s1":s1.reset_index(level=0, inplace=False),
+                                            "s2":s2.reset_index(level=0, inplace=False)}})
+            # If we have a difference operator
+            elif(operator == 1):
+                # Get the absolute value of the difference
+                difference = s1-s2
+                difference = difference.abs()
+                difference.reset_index(level=0, inplace=True)
+                gu.setCompareData({'type':'difference', 'data': difference})
+
+
+            # Get the plot files
+            summaryFile1 = pd.read_csv(SCENARIO_PATH.joinpath(dn.scenarioDirs[scenario1]['summary']))
+            summaryFile2 = pd.read_csv(SCENARIO_PATH.joinpath(dn.scenarioDirs[scenario2]['summary']))
+            leftData1 = summaryFile1[['DateTime',leftVar]]
+            leftData2 = summaryFile2[['DateTime',leftVar]]
+
+            lExtent = [leftData1[leftVar].values.min() if leftData1[leftVar].values.min() < leftData2[leftVar].values.min() else leftData2[leftVar].values.min(),
+                       leftData1[leftVar].values.max() if leftData1[leftVar].values.max() > leftData2[leftVar].values.max() else leftData2[leftVar].values.max()]
+
+            gu.setLeftPlotData({"one":leftData1, "two":leftData2,'tag':leftVar, 'oneScen':scenario1,'twoScen':scenario2, 'extents':lExtent})
+            rightData1 = summaryFile1[['DateTime',rightVar]]
+            rightData2 = summaryFile2[['DateTime',rightVar]]
+
+            r1Min = rightData1[rightVar].values.min()
+            r2Min = rightData2[rightVar].values.min()
+            r1Max = rightData1[rightVar].values.max()
+            r2Max = rightData2[rightVar].values.max()
+
+            rExtent = [r1Min if r1Min < r2Min else r2Min, r1Max if r1Max > r2Max else r2Max]
+
+            gu.setRightPlotData({"one":rightData1, "two":rightData2, 'tag':rightVar, 'oneScen':scenario1,'twoScen':scenario2, 'extents':rExtent})
+
+            haveData = True
+        except IOError:
+            gu.setCompareData(None)
+            gu.setLeftPlotData(None)
+            gu.setRightPlotData(None)
+            haveData = False
+
+
+    if(haveData == False):
+        raise PreventUpdate()
+    else:
+        return haveData
 
 #------------------------------------------------#
 # Callbacks for the summary/timeseries files
 #------------------------------------------------#
-@app.callback([Output('timeseries-cost', 'figure'),
-               #Output("timeseries-cost-2", 'figure'),
-               Output('timeseries-load', 'figure')],
-              [Input('summaryExtents', 'data'),
-               Input('timestep', 'data')],
+@app.callback(Output('left-chart', 'figure'),
+              Output('right-chart', 'figure'),
+              Output('timeDiv', 'style'),
+              Output('plotsDiv', 'style'),
+              Input('timestep', 'data'),
+              Input('runsFile', 'data'),
+              Input('basicsFile', 'data'),
+              Input('compareFile', 'data'),
+              Input('mode', 'data'),
+              State('mode', 'data'),
+              State('summaryExtents', 'data'),
               prevent_initial_call=True)
-def createTimeSeriesSummaries(value, timestep):
+def createCharts(timestep, runsFile, compareFile, basicsFile, showMode, modeState, summaryExtents):
 
+    # Change outputs based on which input is triggered
+    ctx = dash.callback_context
+    triggered = ctx.triggered[0]['prop_id']
 
-    if(value == None):
-        raise PreventUpdate()
+    # Return values
+    leftFig = dash.no_update
+    rightFig = dash.no_update
+    timeDivStyle = {"visibility":'visible'}
+    plotsDivStyle = {"visibility":'visible'}
 
-    summaryFile = gl.summaryStore
-    actuals = gl.actualsStore
+    # Create the runs charts
+    if(showMode == 'scenario'):
 
-    if(value != None):
+        # Get the globally stored files
+        summaryFile = gl.summaryStore
+        actuals = gl.actualsStore
 
-        # Read in the summary file
-        df = summaryFile
-        date = df['DateTime']
-        costFig = go.Figure()  #=make_subplots(rows=2, cols=1,  shared_xaxes=True)#), subplot_titles=("Exp Cost", "Act Cost", "Plot 3", "Plot 4"))
+        if(summaryFile is not None) and (actuals is not None) and (summaryExtents is not None):
 
-        costFig2 = go.Figure()
-        # Exp cost
-        #fig.add_trace(go.Scatter(x=df['DateTime'], y=df['ExpFirstStageCost'], fill='tozeroy', name='ExpFirstStageCost', stackgroup='one', ),  row=1, col=1)
-        #fig.add_trace(go.Scatter(x=df['DateTime'], y=df['ExpSecondStageCost'], fill='tonexty', name='ExpSecondStageCost',  stackgroup='one'),  row=1, col=1)
-        # Act cost
-        costFig.add_trace(go.Scatter(x=df['DateTime'], y=df['ActFirstStageCost'], fill='tozeroy', name='ActFirstStageCost', stackgroup='one',line=dict(color="#008B8B")))
-        costFig.add_trace(go.Scatter(x=df['DateTime'], y=df['ActSecondStageCost'], fill='tonexty',name='ActSecondStageCost', stackgroup='one',line=dict(color="#F08080")))
-        costFig.add_trace(go.Scatter(x=[daterange[timestep], daterange[timestep]], y=[value['cost'][0], 110000], name='Time Step', line=dict(color="#2F4F4F")))
-        # Exp vars
-        #fig.add_trace(go.Scatter(x=df['DateTime'], y=df['ExpLossLoad'], fill='tozeroy', name='ExpLossLoad', stackgroup='one',),  row=3, col=1)
-        #fig.add_trace(go.Scatter(x=df['DateTime'], y=df['ExpOverLoad'], fill='tonexty',name='ExpOverLoad', stackgroup='one',),  row=3, col=1)
-        #fig.add_trace(go.Scatter(x=df['DateTime'], y=df['ExpSpill'], fill='tonexty',name='ExpSpill', stackgroup='one',),  row=3, col=1)
-        #fig.add_trace(go.Scatter(x=df['DateTime'], y=df['ExpRenew'], fill='tonexty',name='ExpRenew', stackgroup='one',),  row=3, col=1)
-        # Act vars
-        loadFig = go.Figure()
-        #loadFig.add_trace(go.Scatter(x=df['DateTime'], y=df['ActOverLoad'], fill='tonexty',name='Actual OverLoad', stackgroup='one',line=dict(color='yellow')))
-        loadFig.add_trace(go.Scatter(x=df['DateTime'], y=df['ActLossLoad'], fill='tozeroy', name='Actual Loss Load', stackgroup='one',line=dict(color=lossHex)))
+            # Cost figure
+            df = summaryFile
+            date = df['DateTime']
+            leftFig = go.Figure()
+            leftFig.add_trace(go.Scatter(x=df['DateTime'], y=df['ActFirstStageCost'], fill='tozeroy', name='ActFirstStageCost', stackgroup='one',line=dict(color="#008B8B")))
+            leftFig.add_trace(go.Scatter(x=df['DateTime'], y=df['ActSecondStageCost'], fill='tonexty',name='ActSecondStageCost', stackgroup='one',line=dict(color="#F08080")))
+            leftFig.add_trace(go.Scatter(x=[daterange[timestep], daterange[timestep]], y=[summaryExtents['cost'][0], 110000], name='Time Step', line=dict(color="#2F4F4F")))
 
-        loadFig.add_trace(go.Scatter(x=df['DateTime'], y=df['ActSpill'], fill='tonexty',name='Actual Spill', stackgroup='one',line=dict(color='#FF7F50')))
-        loadFig.add_trace(go.Scatter(x=df['DateTime'], y=df['ActRenew'], fill='tonexty',name='Actual Renewable', stackgroup='one',line=dict(color=renewableHex)))
-        loadFig.add_trace(go.Scatter(x=actuals['DateTime'], y=actuals['total'],name='Actual Wind', line=dict(color='royalblue', width=4, dash='dot')))
+            # Actuals figure
+            rightFig = go.Figure()
+            rightFig.add_trace(go.Scatter(x=df['DateTime'], y=df['ActLossLoad'], fill='tozeroy', name='Actual Loss Load', stackgroup='one',line=dict(color=dn.lossHex)))
+            rightFig.add_trace(go.Scatter(x=df['DateTime'], y=df['ActSpill'], fill='tonexty',name='Actual Spill', stackgroup='one',line=dict(color='#FF7F50')))
+            rightFig.add_trace(go.Scatter(x=df['DateTime'], y=df['ActRenew'], fill='tonexty',name='Actual Renewable', stackgroup='one',line=dict(color=dn.renewableHex)))
+            rightFig.add_trace(go.Scatter(x=actuals['DateTime'], y=actuals['total'],name='Actual Wind', line=dict(color='royalblue', width=4, dash='dot')))
+            rightFig.add_trace(go.Scatter(x=[daterange[timestep], daterange[timestep]], y=[summaryExtents['load'][0],4500], name='Time Step', line=dict(color="#2F4F4F")))
 
-        loadFig.add_trace(go.Scatter(x=[daterange[timestep], daterange[timestep]], y=[value['load'][0],4500], name='Time Step', line=dict(color="#2F4F4F")))
-        # should work but does not: https://github.com/plotly/plotly.py/issues/3065
-        # fig.add_vline(x=timeSteps[1], line_dash="dot", row="all", col="1",
-        #       annotation_text="Jan 1, 2018 baseline",
-        #       annotation_position="bottom right")
-
-        ## HACK
-        #print("ts", timeSteps[1])
-        #print(datetime.datetime.strptime("2018-09-24 00:05:00.0", "%Y-%m-%d %H:%M:%S.%f" ))
-        #print(datetime.datetime.strptime(timeSteps[1], "%Y-%m-%dT%H:%M:%S.%f").timestamp() * 1000)
-        #print(datetime.datetime.strptime("2018-09-24", "%Y-%m-%d").timestamp() * 1000)
-
-
-        # x = datetime.datetime.strptime(timeSteps[0], "%Y-%m-%dT%H:%M:%S.%f").timestamp() * 1000
-        # x1 = datetime.datetime.strptime(timeSteps[5], "%Y-%m-%dT%H:%M:%S.%f").timestamp() * 1000
-        # print("x", type(x))
-        # fig.add_vrect(x0=x, x1=x1, line_dash="dot", row="all", col=1,
-        #               annotation_text="Test",
-        #               annotation_position="top right")
-
-        costFig.update_layout(
-            autosize=False,
-            width=625,
-            height=200,
-            margin=dict(
-                l=50,
-                r=25,
-                b=50,
-                t=20,
-                pad=10
-            ),
-            legend=dict(
-                yanchor="bottom",
-                y=.99,
-                xanchor="right",
-                x=0.99
+            leftFig.update_layout(
+                autosize=False,
+                width=700,
+                height=300,
+                margin=dict(
+                    l=0,
+                    r=0,
+                    b=0,
+                    t=0,
+                    pad=0
+                ),
+                legend=dict(
+                    yanchor="bottom",
+                    y=.65,
+                    xanchor="right",
+                    x=0.99
+                )
             )
-        )
-        costFig.update_xaxes(
-            #tickangle = 90,
-            title_text = "Time",
-            showgrid= False,
-            range=[daterange[0],daterange[len(daterange)-1]]
-            #title_font = {"size": 20},
-            #title_standoff = -10
-        )
-        costFig.update_yaxes(
-            #tickangle = 90,
-            title_text = "Cost ($/minute)",
-            showgrid= False,
-            range=[0, 120000],
-            #title_font = {"size": 14},
-            title_font=dict(size=10),
-            title_standoff = 25
-        )
-        # costFig2.update_layout(
-        #     autosize=False,
-        #     width=750,
-        #     height=300,
-        #     margin=dict(
-        #         l=50,
-        #         r=50,
-        #         b=0,
-        #         t=0,
-        #         pad=0
-        #     )
-        # )
-        loadFig.update_layout(
-            autosize=False,
-            width=625,
-            height=200,
-            margin=dict(
-                l=55,
-                r=25,
-                b=50,
-                t=20,
-                pad=10
-            ),
-            legend=dict(
-                yanchor="bottom",
-                y=.99,
-                xanchor="right",
-                x=0.99
+            rightFig.update_layout(
+                autosize=False,
+                width=700,
+                height=300,
+                margin=dict(
+                    l=0,
+                    r=0,
+                    b=0,
+                    t=0,
+                    pad=0
+                ),
+                legend=dict(
+                    yanchor="bottom",
+                    y=.5,
+                    xanchor="right",
+                    x=0.99
+                )
             )
-        )
-        loadFig.update_xaxes(
-            #tickangle = 90,
-            title_text = "Time",
-            range=[daterange[0],daterange[len(daterange)-1]],
-            #title_font = {"size": 20},
-            #title_standoff = 25,
-            showgrid = False)
-        loadFig.update_yaxes(
-            #tickangle = 90,
-            title_text = "Capacity kW",
-            showgrid= False,
-            title_font=dict(size=10),
-            range=[0, 5000],#[value['load'][0], value['load'][1]+50]
-            #title_font = {"size": 20},
-            #title_standoff = 25
-        )
+            leftFig.update_xaxes(
+                title_text = "Time",
+                range=[daterange[0],daterange[len(daterange)-1]],
+                showgrid= False,
+            )
+            leftFig.update_yaxes(
+                title_text = "Cost ($/minute)",
+                showgrid= False,
+                range=[0, 120000],
+                title_font=dict(size=10),
+            )
+            rightFig.update_xaxes(
+                title_text = "Time",
+                range=[daterange[0],daterange[len(daterange)-1]],
+                showgrid = False)
+            rightFig.update_yaxes(
+                title_text = "Capacity kW",
+                showgrid= False,
+                range=[0, 5000],
+                title_font=dict(size=10),
+            )
 
-        #print(daterange[timestep])
-        #loadFig.add_vline(x="2020-07-02T00:15:00.0", line_width=3, line_dash="dash",line_color="green")
-        return [costFig, loadFig] #[costFig, costFig2, loadFig]
-    else:
-        raise PreventUpdate()
+
+    # Hide the timestep slider and charts
+    elif(showMode == 'basics'):
+        timeDivStyle = {"visibility":'hidden'}
+        plotsDivStyle = {"visibility":'hidden'}
+
+    # Create the compare charts
+    elif(showMode == "comparison"):
+        leftData = gl.leftPlotStore
+        rightData = gl.rightPlotStore
+
+        if(leftData is not None) and (rightData is not None):
+
+            leftData1 = leftData['one']
+            leftData2 = leftData['two']
+            lExtents = leftData['extents']
+            lTag = leftData['tag']
+            scn1 = leftData['oneScen']
+            scn2 = leftData['twoScen']
+            s1Name = dn.scenarioDirs[scn1]['label'].split("(")[0]
+            s2Name = dn.scenarioDirs[scn2]['label'].split("(")[0]
+
+            leftFig = go.Figure()
+            leftFig.add_trace(go.Scatter(x=leftData1['DateTime'], y=leftData1[lTag], fill='tozeroy', name=s1Name,line=dict(color="#008B8B")))
+            leftFig.add_trace(go.Scatter(x=leftData2['DateTime'], y=leftData2[lTag], name=s2Name,line=dict(color="#F08080")))
+            leftFig.add_trace(go.Scatter(x=[daterange[timestep], daterange[timestep]], y=[lExtents[0], lExtents[1]], name='Time Step', line=dict(color="#2F4F4F")))
+
+            rightData1 = rightData['one']
+            rightData2 = rightData['two']
+            rTag = rightData['tag']
+            rExtents = rightData['extents']
+
+            rightFig = go.Figure()
+            rightFig.add_trace(go.Scatter(x=rightData1['DateTime'], y=rightData1[rTag], fill='tozeroy', name=s1Name, line=dict(color="#008B8B")))
+            rightFig.add_trace(go.Scatter(x=rightData2['DateTime'], y=rightData2[rTag], name=s2Name, line=dict(color="#F08080")))
+            rightFig.add_trace(go.Scatter(x=[daterange[timestep], daterange[timestep]], y=[rExtents[0], rExtents[1]], name='Time Step', line=dict(color="#2F4F4F")))
+
+            leftFig.update_layout(
+                title={
+                    'text': dn.detailsVars[lTag]['label'],
+                    'y':0.9,
+                    'x':0.15,
+                    'xanchor': 'left',
+                    'yanchor': 'top',
+                },
+                autosize=False,
+                width=700,
+                height=300,
+                margin=dict(
+                    l=0,
+                    r=0,
+                    b=0,
+                    t=50,
+                    pad=0
+                ),
+                legend=dict(
+                    yanchor="bottom",
+                    y=1,
+                    xanchor="right",
+                    x=1
+                )
+            )
+            rightFig.update_layout(
+                title={
+                    'text': dn.detailsVars[rTag]['label'],
+                    'y':0.9,
+                    'x':0.15,
+                    'xanchor': 'left',
+                    'yanchor': 'top',
+                },
+                autosize=False ,
+                width=700,
+                height=300,
+                margin=dict(
+                    l=0,
+                    r=0,
+                    b=0,
+                    t=50,
+                    pad=0
+                ),
+                legend=dict(
+                    yanchor="bottom",
+                    y=1,
+                    xanchor="right",
+                    x=1
+                )
+            )
+            leftFig.update_xaxes(
+                title_text = "Time",
+                range=[daterange[0],daterange[len(daterange)-1]],
+                showgrid= False,
+            )
+            leftFig.update_yaxes(
+                title_text = dn.detailsVars[lTag]['label'],
+                showgrid= False,
+                #range=[0, 120000],
+                title_font=dict(size=10),
+            )
+            rightFig.update_xaxes(
+                title_text = "Time",
+                range=[daterange[0],daterange[len(daterange)-1]],
+                showgrid = False)
+            rightFig.update_yaxes(
+                title_text = dn.detailsVars[rTag]['label'],
+                showgrid= False,
+                #range=[0, 5000],
+                title_font=dict(size=10),
+            )
+
+
+    return leftFig, rightFig, timeDivStyle, plotsDivStyle
 
 #------------------------------------------------#
 # Callbacks for detail files
 #------------------------------------------------#
 @app.callback(Output("network-map", "layers"),
-              #Output("mapLegend","layers")],
-               Input('timestep', 'data'),
-               Input('busFile', 'data'),
-               #Input('branchFile', 'data'),
-              [#State('busFile', 'data'),
-               #State('branchFile', 'data'),
-               #State('busVariable', 'data'),
-               #State('branchVariable', 'data'),
-               #State('busDataColor', 'data'),
-               #State('branchDataColor', 'data'),
-               State('busLossExtents', 'data'),
-               State('busThermalExtents', 'data'),
-               State('busRenewableExtents', 'data')],
+              Input('timestep', 'data'),
+              Input('runsFile', 'data'),
+              Input('basicsFile', 'data'),
+              Input('compareFile', 'data'),
+              Input('mode', 'data'),
+              State('mode', 'data'),
               prevent_initial_call=True)
-def createMap(timestep, busFile, busLossExtents, busThermalExtents, busRenewableExtents):
-    #branchFile, busFileState, branchFileState, busVariable, branchVariable, busColor, branchColor,):
-    #print("update map",timestep, busFile,  busLossExtents, busThermalExtents, busRenewableExtents)
+def createMap(timestep, runsFile, basicsFile, compareFile, showMode, modeState):
 
-    #print(busFile)
-    #print("gl.busLossStore", gl.busLossStore)
+    # Change outputs based on which input is triggered
+    ctx = dash.callback_context
+    triggered = ctx.triggered[0]['prop_id']
 
-    #print("create map TS",daterange[timestep])
-    #print(busFile)
-
-    if(timestep == None):
-        raise PreventUpdate()
-
-    #print(daterange[timestep])
-    # Create the map (and legend) layers
+    # Create the map layers
     mapLayers=[]
-    legendLayers=[]
 
-    # If we have branch data
-    # if(branchFile != None):
-    #
-    #     # Grab the current timeste of the bus data
-    #     branchData = gl.branchDataStore.loc[gl.branchDataStore['DateTime'] == timeSteps[timestep]].values[0].tolist()
-    #     branchData.pop(0) # (remove the timestamp)
-    #
-    #     # Append the data to the geometry data
-    #     branchMapData = branch
-    #     branchMapData[branchVariable] = branchData
-    #
-    #     # Get the extent of the data
-    #     branchExtents = [min(branchData), max(branchData)]
-    #
-    #     #colorscales = px.colors.named_colorscales()
-    #     #print("colors?" , colorscales)
-    #     #plotly.colors.colorscale_to_colors(colorscales[0])
-    #     #print(px.colors.sequential.Plasma)
-    #
-    #     lineLayer = {
-    #         "type": "LineLayer",
-    #         "id": 'line-layer',
-    #         "data": branchMapData.to_dict(orient='records'),
-    #         "pickable": False,
-    #         "opacity": 0.8,
-    #         "widthScale": 1,
-    #         "widthMinPixels":1,
-    #         "widthMaxPixels":5,
-    #         "getWidth": "function(d){return d['"+branchVariable+"']}",
-    #         "getSourcePosition": "function(d){return d['fromPos']}",
-    #         "getTargetPosition": "function(d){return d['toPos']}" ,
-    #         "getColor": {"scale":{"type":colorMaps['branch']['scale'],
-    #                               "range":  colorMaps['branch']['rangeRGB'],
-    #                               "domain": branchExtents,
-    #                               "value": branchVariable,
-    #                              }}
-    #
-    #
-    #     }
-    #     mapLayers[0] = lineLayer
+    # If we are showing default runs
+    if(showMode == "scenario"):
+        # If we have bus data
+        if(runsFile == True):
 
-    # If we have bus data
-    if(busFile != None):
+            # Add the branch layer
+            mapLayers.append(initialLayers[0])
+            mapLayers.append(initialLayers[1])
 
-        # Grab the current timestep of the bus data, rename column to the variable name
-        mapLayers.append(initialLayers[0])
-        mapLayers.append(initialLayers[1])
-
-        if(not gl.busLossStore.empty):
+            # Grab the loss of load
             busLoss = gl.busLossStore[['Bus ID',daterange[timestep]]]
             busLoss = busLoss.astype({'Bus ID': 'int64', daterange[timestep]:'float64'})
             busLoss = busLoss.rename(columns={daterange[timestep]: "Loss"})
-            #print(busLoss)
 
-
-
-        #print("gl", gl.busThermalStore)
-        if(not gl.busThermalStore.empty):
+            # Grab the thermal generation
             busThermal= gl.busThermalStore[['Bus ID',daterange[timestep]]]
             busThermal = busThermal.astype({'Bus ID': 'int64', daterange[timestep]:'float64'})
             busThermal = busThermal.rename(columns={daterange[timestep]: "Thermal"})
 
-        busRenewable = gl.busRenewableStore[['Bus ID',daterange[timestep]]]
-        busRenewable = busRenewable.astype({'Bus ID': 'int64', daterange[timestep]:'float64'})
-        busRenewable = busRenewable.rename(columns={daterange[timestep]: "Renewable"})
+            # Grab the renewable generation
+            busRenewable = gl.busRenewableStore[['Bus ID',daterange[timestep]]]
+            busRenewable = busRenewable.astype({'Bus ID': 'int64', daterange[timestep]:'float64'})
+            busRenewable = busRenewable.rename(columns={daterange[timestep]: "Renewable"})
 
-        # Append the data to the geometry data
-        busMapData = pd.merge(busLoss, bus, on='Bus ID')
-        busMapData = pd.merge(busThermal, busMapData, on='Bus ID')
-        busMapData = pd.merge(busRenewable, busMapData, on='Bus ID')
+            # Append the data to the geometry data
+            busMapData = pd.merge(busLoss, bus, on='Bus ID')
+            busMapData = pd.merge(busThermal, busMapData, on='Bus ID')
+            busMapData = pd.merge(busRenewable, busMapData, on='Bus ID')
 
-        # lossColor = {"scale":{"type":colorMaps['whiteRed']['scale'],
-        #              "range": colorMaps['whiteRed']['rangeRGB'],
-        #              "domain": busLossExtents,
-        #              "value": "Loss",
-        #             }}
-        # thermalColor = {"scale":{"type":colorMaps["blu"]['scale'],
-        #                 "range": colorMaps["blu"]['rangeRGB'],
-        #                 "domain": busThermalExtents,
-        #                 "value": "Thermal",
-        #                 }}
-        # renewableColor = {"scale":{"type":colorMaps['grn']['scale'],
-        #                   "range": colorMaps['grn']['rangeRGB'],
-        #                   "domain": busRenewableExtents,
-        #                   "value": "Renewable",
-        #               }}
+            # Create the reneweable layer
+            renewableScatterLayer = {
+                "type": "ScatterplotLayer",
+                "id": 'scatterplot-layer-renewable',
+                "data": busMapData.to_dict(orient='records'),
+                "pickable": False,
+                "opacity": .25,
+                "stroked": True,
+                "filled": True,
+                "radiusScale": 50,
+                "lineWidthScale": 25,
+                "radiusMinPixels": 0,
+                "lineWidthMinPixels": 0,
+                "getPosition": "function(d){return [d['lng'], d['lat']]}",
+                "getRadius": "function(d){return d['Renewable']}",
+                "getLineWidth": "function(d){return d['Renewable']}",
+                "getLineColor": dn.renewableColor,
+                "getFillColor": dn.renewableColor,
+            }
+            mapLayers.append(renewableScatterLayer)
+
+            # Create the thermal layer
+            thermalScatterLayer = {
+                "type": "ScatterplotLayer",
+                "id": 'scatterplot-layer-thermal',
+                "data": busMapData.to_dict(orient='records'),
+                "pickable": False,
+                "opacity": .25,
+                "stroked": True,
+                "filled": True,
+                "radiusScale": 50,
+                "lineWidthScale": 25,
+                "radiusMinPixels": 0,
+                "lineWidthMinPixels": 0,
+                "getPosition": "function(d){return [d['lng'], d['lat']]}",
+                "getRadius": "function(d){return d['Thermal']}",
+                "getLineWidth": "function(d){return d['Thermal']}",
+                "getLineColor": dn.thermalColor,
+                "getFillColor": dn.thermalColor,
+            }
+            mapLayers.append(thermalScatterLayer)
+
+            # Create the loss layer
+            lossScatterLayer = {
+                "type": "ScatterplotLayer",
+                "id": 'scatterplot-layer2',
+                "data": busMapData.to_dict(orient='records'),
+                "pickable": False,
+                "opacity": 0.5,
+                "stroked": True,
+                "filled": True,
+                "radiusScale":50,
+                "lineWidthScale": 25,
+                "radiusMinPixels": 0,
+                "lineWidthMinPixels": 0,
+                "getPosition": "function(d){return [d['lng'], d['lat']]}",
+                "getRadius": "function(d){return d['Loss']}",
+                "getLineWidth": "function(d){return d['Loss']}",
+                "getLineColor": "function(d){ let color = d['Loss']==0 ? [248, 248, 255] : [227,26,28]; return color}",
+                "getFillColor": "function(d){ let color = d['Loss']==0 ? [248, 248, 255] : [227,26,28]; return color}",
+            }
+            mapLayers.append(lossScatterLayer)
+
+    elif(showMode == "comparison"):
+        mapLayers.append(initialLayers[0])
+        mapLayers.append(initialLayers[1])
+        if(compareFile == True):
+
+            # Create the difference scatter layer
+            if(gl.compareStore['type'] == "difference"):
+                diff = gl.compareStore['data'][['Bus ID',daterange[timestep]]]
+                diff = diff.astype({'Bus ID': 'int64', daterange[timestep]:'float64'})
+                diff = diff.rename(columns={daterange[timestep]: "diff"})
+                diffMap = pd.merge(diff, bus, on='Bus ID')
+
+                # Create the diff layer
+                diffScatterLayer = {
+                    "type": "ScatterplotLayer",
+                    "id": 'scatterplot-layer-renewable',
+                    "data": diffMap.to_dict(orient='records'),
+                    "pickable": False,
+                    "opacity": .5,
+                    "stroked": True,
+                    "filled": True,
+                    "radiusScale": 50,
+                    #"lineWidthScale": 25,
+                    "radiusMinPixels": 1,
+                    "lineWidthMinPixels": 1,
+                    "getPosition": "function(d){return [d['lng'], d['lat']]}",
+                    "getRadius": "function(d){return d['diff']}",
+                    #"getLineWidth": "function(d){return d['diff']}",
+                    "getLineColor": dn.lineColor,
+                    "getFillColor": dn.diffColor,
+                }
+                mapLayers.append(diffScatterLayer)
+
+            elif(gl.compareStore['type'] == "overlay"):
+                r1 = gl.compareStore['data']['s1'][['Bus ID',daterange[timestep]]]
+                r1 = r1.astype({'Bus ID': 'int64', daterange[timestep]:'float64'})
+                r1 = r1.rename(columns={daterange[timestep]: "diff"})
+                r1 = pd.merge(r1, bus, on='Bus ID')
+
+                r2 = gl.compareStore['data']['s2'][['Bus ID',daterange[timestep]]]
+                r2 = r2.astype({'Bus ID': 'int64', daterange[timestep]:'float64'})
+                r2 = r2.rename(columns={daterange[timestep]: "diff"})
+                r2 = pd.merge(r2, bus, on='Bus ID')
+
+                # Create the r1 layer
+                r1ScatterLayer = {
+                    "type": "ScatterplotLayer",
+                    "id": 'scatterplot-layer-renewable',
+                    "data":r1.to_dict(orient='records'),
+                    "pickable": False,
+                    "opacity": .35,
+                    "stroked": True,
+                    "filled": True,
+                    "radiusScale": 50,
+                    "radiusMinPixels": 0,
+                    "lineWidthMinPixels": 2,
+                    "getPosition": "function(d){return [d['lng'], d['lat']]}",
+                    "getRadius": "function(d){return d['diff']}",
+                    #"getLineWidth": "function(d){return d['diff']}",
+                    "getLineColor": dn.r1Color,
+                    "getFillColor": dn.r1Color,
+                }
+                mapLayers.append(r1ScatterLayer)
+                r2ScatterLayer = {
+                    "type": "ScatterplotLayer",
+                    "id": 'scatterplot-layer-renewable',
+                    "data":r2.to_dict(orient='records'),
+                    "pickable": False,
+                    "opacity": .75,
+                    "stroked": True,
+                    "filled": False,
+                    "radiusScale": 50,
+                    "radiusMinPixels": 0,
+                    "lineWidthMinPixels": 3,
+                    "getPosition": "function(d){return [d['lng'], d['lat']]}",
+                    "getRadius": "function(d){return d['diff']}",
+                    #"getLineWidth": "function(d){return d['diff']}",
+                    "getLineColor": dn.r2Color,
+                    "getFillColor": dn.r2Color,
+                }
+                mapLayers.append(r2ScatterLayer)
+
+    elif(showMode == "basics"):
+
+        # Add the branch layer
+        mapLayers.append(initialLayers[0])
+
+        # Create the basics layer
+        if(basicsFile == True):
+            basics = gl.basicsStore
+            scatterLayer = {
+                "type": "ScatterplotLayer",
+                "id": 'scatterplot-layer2',
+                "data": basics.to_dict(orient='records'),
+                "pickable": False,
+                "opacity": 1.0,
+                "stroked": True,
+                "filled": True,
+                "radiusScale":15,
+                "radiusMinPixels":2,
+                "lineWidthMinPixels": 1,
+                "getPosition": "function(d){return [d['lng'], d['lat']]}",
+                "getRadius": "function(d){return d['GenMWMax']}",
+                "getLineWidth":2,
+                "getLineColor": [47, 79, 79],
+                "getFillColor": [218, 165, 32],
+            }
+            mapLayers.append(scatterLayer)
+        else:
+            # Or just add the default buses
+            mapLayers.append(initialLayers[1])
 
 
 
-
-        renewableScatterLayer = {
-            "type": "ScatterplotLayer",
-            "id": 'scatterplot-layer-renewable',
-            "data": busMapData.to_dict(orient='records'),
-            "pickable": False,
-            "opacity": .25,
-            "stroked": True,
-            "filled": True,
-            "radiusScale": 50,
-            "lineWidthScale": 25,
-            "radiusMinPixels": 0,
-            "lineWidthMinPixels": 0,
-            "getPosition": "function(d){return [d['lng'], d['lat']]}",
-
-            #"getRadius": "function(d){return d['Loss']}",
-            #"getRadius": "function(d){return d['Thermal']}",
-            "getRadius": "function(d){return d['Renewable']}",
-
-            #"getLineWidth": "function(d){return d['Loss']}",
-            #"getLineWidth": "function(d){return d['Thermal']}",
-            "getLineWidth": "function(d){return d['Renewable']}",
-
-            #"getLineColor": lossColor,
-            "getLineColor": renewableColor,
-            #"getLineColor": renewableColor,
-
-            #"getFillColor": lossColor,
-            #"getFillColor": thermalColor,
-            "getFillColor": renewableColor,
-        }
-        mapLayers.append(renewableScatterLayer)
-
-
-        thermalScatterLayer = {
-            "type": "ScatterplotLayer",
-            "id": 'scatterplot-layer-thermal',
-            "data": busMapData.to_dict(orient='records'),
-            "pickable": False,
-            "opacity": .25,
-            "stroked": True,
-            "filled": True,
-            "radiusScale": 50,
-            "lineWidthScale": 25,
-            "radiusMinPixels": 0,
-            "lineWidthMinPixels": 0,
-            "getPosition": "function(d){return [d['lng'], d['lat']]}",
-
-            #"getRadius": "function(d){return d['Loss']}",
-            "getRadius": "function(d){return d['Thermal']}",
-            #"getRadius": "function(d){return d['Renewable']}",
-
-            #"getLineWidth": "function(d){return d['Loss']}",
-            "getLineWidth": "function(d){return d['Thermal']}",
-            #"getLineWidth": "function(d){return d['Renewable']}",
-
-            #"getLineColor": lossColor,
-            "getLineColor": thermalColor,
-            #"getLineColor": renewableColor,
-
-            #"getFillColor": lossColor,
-            #"getFillColor": thermalColor,
-            "getFillColor": thermalColor,
-        }
-        mapLayers.append(thermalScatterLayer)
-
-
-        scatterLayer = {
-            "type": "ScatterplotLayer",
-            "id": 'scatterplot-layer2',
-            "data": busMapData.to_dict(orient='records'),
-            "pickable": False,
-            "opacity": 0.5,
-            "stroked": True,
-            "filled": True,
-            "radiusScale":50,
-            "lineWidthScale": 25,
-            "radiusMinPixels": 5,
-            "lineWidthMinPixels": 0,
-            "getPosition": "function(d){return [d['lng'], d['lat']]}",
-
-            "getRadius": "function(d){return d['Loss']}",
-            #"getRadius": "function(d){return d['Thermal']}",
-            #"getRadius": "function(d){return d['Renewable']}",
-
-            "getLineWidth": "function(d){return d['Loss']}",
-            #"getLineWidth": "function(d){return d['Thermal']}",
-            #"getLineWidth": "function(d){return d['Renewable']}",
-
-            #"getLineColor": [0,0,0],
-            #"getLineColor": [227,26,28],#lossColor,
-            "getLineColor": "function(d){ let color = d['Loss']==0 ? [248, 248, 255] : [227,26,28]; return color}",#lossColor,
-            #"getLineColor": thermalColor,
-            #"getLineColor": renewableColor,
-
-            #"getFillColor": [227,26,28],
-            "getFillColor": "function(d){ let color = d['Loss']==0 ? [248, 248, 255] : [227,26,28]; return color}",
-
-            #if d['Loss'] == 0 return return d['Thermal']}",#lossColor,
-            #"getFillColor": thermalColor,
-            #"getFillColor": renewableColor
-        }
-        mapLayers.append(scatterLayer)
-
-        # Set the map legend
-        # layers={
-        #     'type': "colorLegend",
-        #     'id': "dataLayer",
-        #     'value': "thermal",
-        #     'title': "Thermal",
-        #     'position': [0,0],
-        #     "colorMap": thermalColor
-        # }
-        # legendLayers.append(layers);
-
-
-    # If we haven't generated layers, push the initial layers
-    if(len(mapLayers) == 0):
-        mapLayers = initialLayers
-
-
-    return mapLayers#,legendLayers
+    return mapLayers
 
 
 if __name__ == '__main__':

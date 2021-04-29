@@ -7,11 +7,9 @@ busRenewableStore = None
 summaryStore = None
 actualsStore = None
 
-# The full branch dataframe
-branchDataStore = None
+# The basics data
+basicsStore = None
+compareStore = None
 
-# The bus data
-bus = None
-
-# The branch data
-branch = None
+leftPlotStore = None
+rightPlotStore = None

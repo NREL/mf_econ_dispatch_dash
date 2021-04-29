@@ -4,3 +4,4 @@ gunicorn==19.9.0
 nrel_dash_components-0.0.1.tar.gz
 deckgl_ly-0.0.1.tar.gz
 pandas
+dash_bootstrap_components 

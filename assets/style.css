@@ -1,26 +1,17 @@
 
-.title{ font-size: 20px;}
-.subtitle{
-  font-size: 18px;
-    margin: 0px;
-}
-.section{
-
-  margin: 0px;
-}
-.tile{
-  padding:5px;
-  margin: 0px;
+.mapbox-improve-map {
+    display: none;
 }
 
-.p{
-  margin: 0px;
-}
 .Select-control, .Select-menu-outer, .Select-multi-value-wrapper, .select-up, .is-open .Select-control {
  font-size: 14px;
   color: black;
   margin: 0px;
+}
 
+.sliderSmall{
+  width:100%;
+  word-break: keep-all;
 }
 .mapDiv{
   z-index:0;
@@ -50,4 +41,9 @@
   height: 50px;
   margin-right: 5px;
   width: 10px;
+}
+
+.myLabel{
+  font-size: 32px;
+  /*color: Red;*/
 }
