@@ -40,7 +40,6 @@ bus = pd.read_csv(DATA_PATH.joinpath("RTS/bus.csv"))
 bus = bus[['Bus ID','lat','lng']]
 branch = pd.read_csv(DATA_PATH.joinpath("RTS/branch.csv"))
 branch = branch[['UID','From Bus','To Bus']]
-#gen = pd.read_csv(DATA_PATH.joinpath("RTS/gen.csv"))
 
 # Process the branch data
 fromPos = []
@@ -118,7 +117,7 @@ app = dash.Dash(__name__, title='RTS', update_title='', external_stylesheets=[db
 server = app.server  # expose server variable for Dash server deployment
 app.layout =  ndc.NRELApp(
      appName="Multi-Fidelity Economic Dispatch Visualizations",
-     description="",
+     description="Visualization tool for exploration of approximations to stocastic economic dispatch.",
      children=[
         dcc.Store(id='mode', storage_type='memory'),
         dcc.Store(id='runsFile', storage_type='memory'),
@@ -134,15 +133,15 @@ app.layout =  ndc.NRELApp(
         html.Hr(),
         html.Div(className='columns', children=[
             html.Div(className='column is-one-quarter notification', children=[
-                    dbc.Button("Investigate Power Flow Runs", id="scenario-fade-button", className="mb-3"),
-                    dbc.Fade(
+                    dbc.Button("Investigate Power Flow Runs", id="scenario-collapse-button", className="mb-3"),
+                    dbc.Collapse(
                         dbc.Card(
                             dbc.CardBody(children=[
-                                html.H4("Select Run to Explore", className="card-title"),
+                                #html.H4("Select Run to Explore", className="is-size-6"),
                                 #html.P("Choose a scenario, results ", className="card-text"),
                                 # Left UI tiles
                                 html.Div(className='tile is-parent is-vertical is-12', children=[
-                                    #html.P(className="title is-size-6", children=["Power Flow Scenario:"]),
+                                    html.P(className="title is-size-6", children=["Select Run to Explore:"]),
                                     html.Div(className="subtitle", children=[
                                         dcc.Dropdown(
                                             id="scenario-dropdown",
@@ -153,19 +152,16 @@ app.layout =  ndc.NRELApp(
                                 ]),
                             ])
                         ),
-                        id="scenario-fade",
-                        is_in=True,
-                        appear=False,
+                        id="scenario-collapse",
+                        is_open=True,
                         className="mb-3",
                     ),
-                    dbc.Button("Compare Power Flow Runs", id="comparison-fade-button", className="mb-3"),
-                    dbc.Fade(
+                    dbc.Button("Compare Power Flow Runs", id="comparison-collapse-button", className="mb-3"),
+                    dbc.Collapse(
                         dbc.Card(
                             dbc.CardBody(children=[
 
-                                html.H4("Choose runs for comparison.", className="card-text"),
-
-
+                                html.H4("Choose runs for comparison.", className="is-size-5"),
                                 html.P(className="title is-size-6", children=["Scenario 1:"]),
                                 html.Div(className="subtitle", children=[
                                     dcc.Dropdown(
@@ -219,20 +215,16 @@ app.layout =  ndc.NRELApp(
                                 ]),
                             ])
                         ),
-                        id="comparison-fade",
-                        is_in=False,
-                        appear=False,
+                        id="comparison-collapse",
+                        is_open=False,
                         className="mb-3",
                     ),
-                    dbc.Button("Display Basic Info", id="basics-fade-button", className="mb-3"),
-                    dbc.Fade(
+                    dbc.Button("Display Basic Info", id="basics-collapse-button", className="mb-3"),
+                    dbc.Collapse(
 
                         dbc.Card(
                             dbc.CardBody(children=[
-                                html.H4("Select data to show on the grid.", className="card-title"),
-                                #html.P("Directions on how to use these tools", className="card-text"),
-
-                                #html.P(className="title is-size-6", children=["Select Data to Show on Grid:"]),
+                                html.P(className="title is-size-6", children=["Select data to show on the grid:"]),
                                 html.Div(className="subtitle", children=[
                                     dcc.Dropdown(
                                         id="basics-dropdown",
@@ -242,99 +234,163 @@ app.layout =  ndc.NRELApp(
                                 ]),
                             ])
                         ),
-                        id="basics-fade",
-                        is_in=False,
-                        appear=False,
+                        id="basics-collapse",
+                        is_open=False,
                         className="mb-3",
                     ),
             ]),
-            html.Div(className='column is-one-half', children=[
-            # Right Vis tiles
-            html.Div(className='tile is-parent is-vertical is-12', children=[
-                # Slider tile
-                html.Div(className='tile is-child', id="timeDiv", children=[
-                    html.Div(className="tile", children=[
-                        dbc.Button('Stop', id='stop-val', className="mr-1 mb-2", color="danger", size="sm", outline=True,n_clicks=0, disabled=True),
-                        dbc.Button('Play', id='play-val', className="mr-1 mb-2", color="dark", size="sm", outline=True,n_clicks=0),
-                        html.P(className='tag is-large', id="slider-val", children=[]),
+            html.Div(className='column is-three-quarters', children=[
+                # Right Vis tiles
+                html.Div(className='tile is-parent is-vertical is-12', children=[
+                    # Slider tile
+                    html.Div(className='tile is-child', id="timeDiv", children=[
+                        dbc.Collapse(
+                            dbc.Card(
+                                dbc.CardBody(children=[
+                                    html.Div(className="tile", children=[
+                                        dbc.Button('Stop', id='stop-val', className="mr-1 mb-2", color="danger", size="sm", outline=True,n_clicks=0, disabled=True),
+                                        dbc.Button('Play', id='play-val', className="mr-1 mb-2", color="dark", size="sm", outline=True,n_clicks=0),
+                                        html.P(className='tag is-large', id="slider-val", children=[]),
+                                    ]),
+                                    html.Div(className="tile is-child ml-3 pl-6", children=[
+                                        dcc.Slider(
+                                            id='time-slider',
+                                            min = 0,
+                                            max = len(timeSteps)+10,
+                                            value = 0,
+                                            marks=dn.getMarks(timeSteps),
+                                            updatemode='drag',
+                                            className="sliderSmall ml-3 pl-3"
+                                        ),
+                                    ])
+                                ])
+                            ),
+                            id="slider-collapse",
+                            is_open=True,
+                        )
                     ]),
 
-                    html.Div(className="tile is-child ml-3 pl-6", children=[
-                        dcc.Slider(
-                            id='time-slider',
-                            min = 0,
-                            max = len(timeSteps)+10,
-                            value = 0,
-                            marks=dn.getMarks(timeSteps),
-                            updatemode='drag',
-                            className="sliderSmall ml-3 pl-3"
-                        ),
+                    # Map tile
+                    html.Div(className='tile is-child' , children=[
+                        html.Div(className='tile is-dark mapDiv', children=[
+                            dgl.DeckglLy(id='network-map',
+                                mapboxtoken="pk.eyJ1Ijoia3BvdHRlciIsImEiOiJCNFlOLWVnIn0.IdEiAEoZbboAuuqOYtWg0w",
+                                mapStyle="mapbox://styles/kpotter77/ck6ct8e2w0o1o1imrq0runboi",
+                                viewState = viewState,
+                                layers=initialLayers
+                            ),
+                          ])
                     ]),
-                ]),
-                # Map tile
-                html.Div(className='tile is-child' , children=[
-                    html.Div(className='tile is-dark mapDiv', children=[
-                        dgl.DeckglLy(id='network-map',
-                            mapboxtoken="pk.eyJ1Ijoia3BvdHRlciIsImEiOiJCNFlOLWVnIn0.IdEiAEoZbboAuuqOYtWg0w",
-                            mapStyle="mapbox://styles/kpotter77/ck6ct8e2w0o1o1imrq0runboi",
-                            viewState = viewState,
-                            layers=initialLayers
-                        ),
-                      ])
-                ]),
-                # Graphs
-                html.Div(className='tile is-child', id='plotsDiv', children=[
-                    html.Article(className='tile', children=[
-                        dcc.Graph(id="left-chart", config={'displayModeBar': False}),
-                        dcc.Graph(id="right-chart", config={'displayModeBar': False}),
+
+                    # Graphs tile
+                    html.Div(className='tile is-child' , children=[
+                        dbc.Collapse(
+                            dbc.Card(
+                                dbc.CardBody(children=[
+                                    html.Div(className="columns", children=[
+                                        html.Div(className='column is-6', children=[
+                                            dcc.Graph(id="left-chart", config={'displayModeBar': False}),
+                                         ]),
+                                         html.Div(className='column is-6 ', children=[
+                                            dcc.Graph(id="right-chart",  config={'displayModeBar': False}),
+                                        ]),
+                                    ])
+                                ])
+                            ),
+                            id="graphs-collapse",
+                            is_open=True,
+                        )
                     ])
                 ])
             ]),
+        ]),
+        html.Div(className="hero is-small box",  children=[
+            html.Details(className="", open=False, children=[
+                html.Summary("Credits"),
+
+                html.Div(className="card", children=[
+                    html.Header(className="card-header", children=[
+                        html.P(className="card-header-title",children=[
+                            "Developers and Collaborators"
+                        ]),
+                    ]),
+                    html.Div(className="card-content", children=[
+                        html.Div(className="content", children=[
+                            html.P(className="instruct-labels", children=[
+                                "Kristi Potter (Kristi.Potter@nrel.gov)",
+                                html.Br(),
+                                "Ryan King (Ryan.King@nrel.gov)",
+                                html.Br(),
+                                "Kinshuk Panda (Kinshuk.Panda@nrel.gov)",
+                                html.Br(),
+                                "Jonathan Maack (Jonathan.Maack@nrel.gov)"
+                            ]),
+                        ]),
+                    ]),
+                    html.Footer(className="card-footer", children=[
+                        html.Div(className="card-footer-item", children=[
+                            html.P(className="subtitle", children=["Continue to check back for updates and new features!"]),
+                        ]),
+                    ]),
+                    html.Footer(className="card-footer", children=[
+                        html.Div(className="card-footer-item", children=[
+                            html.P(className="acks", children=[
+                                "This work was authored by the National Renewable Energy Laboratory, operated by Alliance for Sustainable Energy, LLC, for the U.S. Department of Energy (DOE) under Contract No. DE-AC36-08GO28308.",
+                                " This work was supported by the Laboratory Directed Research and Development (LDRD) Program at NREL.",
+                                " The research was performed using computational resources sponsored by the Department of Energy’s Office of Energy Efficiency and Renewable Energy and located at the National Renewable Energy Laboratory.",
+                                " The views expressed in the article do not necessarily represent the views of the DOE or the U.S. Government.",
+                                " The U.S. Government retains and the publisher, by accepting the article for publication, acknowledges that the U.S. Government retains a nonexclusive, paid-up, irrevocable, worldwide license to publish or reproduce the published form of this work, or allow others to do so, for U.S. Government purposes."
+                            ])
+                        ]),
+                    ]),
+                ])
+            ])
         ])
-    ])
-])
+    ]
+)
+
 
 #-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-#
 # Callbacks
 #-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-#
 @app.callback(Output("mode", "data"),
-              Output("scenario-fade", "is_in"),
-              Output("comparison-fade", "is_in"),
-              Output("basics-fade", "is_in"),
-              Input("scenario-fade-button", "n_clicks"),
-              Input("comparison-fade-button", "n_clicks"),
-              Input("basics-fade-button", "n_clicks"),
-              State("scenario-fade", "is_in"),
-              State("comparison-fade", "is_in"),
-              State("basics-fade", "is_in"),
+              Output("scenario-collapse", "is_open"),
+              Output("comparison-collapse", "is_open"),
+              Output("basics-collapse", "is_open"),
+              Input("scenario-collapse-button", "n_clicks"),
+              Input("comparison-collapse-button", "n_clicks"),
+              Input("basics-collapse-button", "n_clicks"),
+              State("scenario-collapse", "is_open"),
+              State("comparison-collapse", "is_open"),
+              State("basics-collapse", "is_open"),
              )
-def toggle_fade(scenario_n, comparison_n, basics_n, scenario_is_in, comparison_is_in, basics_is_in):
+def toggle_fade(scenario_n, comparison_n, basics_n, scenario_is_open, comparison_is_open, basics_is_open):
 
     # Change outputs based on which input is triggered
     ctx = dash.callback_context
     triggered = ctx.triggered[0]['prop_id']
 
     mode = None
-    scenario = scenario_is_in
-    comparison = comparison_is_in
-    basics = basics_is_in
+    scenario = scenario_is_open
+    comparison = comparison_is_open
+    basics = basics_is_open
 
     if(triggered=="."):
         mode = "scenario"
 
-    elif(triggered == "scenario-fade-button.n_clicks"):
+    elif(triggered == "scenario-collapse-button.n_clicks"):
         basics = False
         scenario = not scenario
         comparison = not scenario
         mode =  "scenario" if scenario else "comparison"
 
-    elif(triggered == "comparison-fade-button.n_clicks"):
+    elif(triggered == "comparison-collapse-button.n_clicks"):
         scenario = False
         comparison = not comparison
         basics = not comparison
         mode = "comparison" if comparison else "basics"
 
-    elif(triggered == "basics-fade-button.n_clicks"):
+    elif(triggered == "basics-collapse-button.n_clicks"):
         comparison = False
         basics = not basics
         scenario = not basics
@@ -471,9 +527,8 @@ def updateBasicsFile(value):
     # The get the maximal generation values
     if(value==0):
         try:
-            maxFile = pd.read_csv(DATA_PATH.joinpath("RTS/maxGen.csv"))
-            merged = bus.merge(maxFile, on='Bus ID', how='left').fillna(0)
-            gu.setBasicsData(merged)
+            # Read in the max generation file
+            gu.setBasicsData(pd.read_csv(DATA_PATH.joinpath("RTS/fullMaxGen.csv")))
             haveData = True
         except IOError:
             gu.setBasicsData(None)
@@ -481,7 +536,7 @@ def updateBasicsFile(value):
     return haveData
 
 #------------------------------------------------#
-# Callbacks to update the basics data
+# Callbacks to update the compare data
 #------------------------------------------------#
 @app.callback(Output('compareFile','data'),
               Input('scenario-1-dropdown','value'),
@@ -568,8 +623,8 @@ def updateCompareFile(scenario1, scenario2, operator, mapVar, leftVar, rightVar)
 #------------------------------------------------#
 @app.callback(Output('left-chart', 'figure'),
               Output('right-chart', 'figure'),
-              Output('timeDiv', 'style'),
-              Output('plotsDiv', 'style'),
+              Output('slider-collapse', 'is_open'),
+              Output('graphs-collapse', 'is_open'),
               Input('timestep', 'data'),
               Input('runsFile', 'data'),
               Input('basicsFile', 'data'),
@@ -587,8 +642,8 @@ def createCharts(timestep, runsFile, compareFile, basicsFile, showMode, modeStat
     # Return values
     leftFig = dash.no_update
     rightFig = dash.no_update
-    timeDivStyle = {"visibility":'visible'}
-    plotsDivStyle = {"visibility":'visible'}
+    sliderIsOpen = True
+    graphsIsOpen = True
 
     # Create the runs charts
     if(showMode == 'scenario'):
@@ -617,8 +672,8 @@ def createCharts(timestep, runsFile, compareFile, basicsFile, showMode, modeStat
 
             leftFig.update_layout(
                 autosize=False,
-                width=700,
-                height=300,
+                #width=700,
+                #height=300,
                 margin=dict(
                     l=0,
                     r=0,
@@ -635,8 +690,8 @@ def createCharts(timestep, runsFile, compareFile, basicsFile, showMode, modeStat
             )
             rightFig.update_layout(
                 autosize=False,
-                width=700,
-                height=300,
+                #width=700,
+                #height=300,
                 margin=dict(
                     l=0,
                     r=0,
@@ -673,11 +728,10 @@ def createCharts(timestep, runsFile, compareFile, basicsFile, showMode, modeStat
                 title_font=dict(size=10),
             )
 
-
     # Hide the timestep slider and charts
     elif(showMode == 'basics'):
-        timeDivStyle = {"visibility":'hidden'}
-        plotsDivStyle = {"visibility":'hidden'}
+        sliderIsOpen = False
+        graphsIsOpen = False
 
     # Create the compare charts
     elif(showMode == "comparison"):
@@ -719,8 +773,8 @@ def createCharts(timestep, runsFile, compareFile, basicsFile, showMode, modeStat
                     'yanchor': 'top',
                 },
                 autosize=False,
-                width=700,
-                height=300,
+                #width=700,
+                #height=300,
                 margin=dict(
                     l=0,
                     r=0,
@@ -744,8 +798,8 @@ def createCharts(timestep, runsFile, compareFile, basicsFile, showMode, modeStat
                     'yanchor': 'top',
                 },
                 autosize=False ,
-                width=700,
-                height=300,
+                #width=700,
+                #height=300,
                 margin=dict(
                     l=0,
                     r=0,
@@ -782,8 +836,7 @@ def createCharts(timestep, runsFile, compareFile, basicsFile, showMode, modeStat
                 title_font=dict(size=10),
             )
 
-
-    return leftFig, rightFig, timeDivStyle, plotsDivStyle
+    return leftFig, rightFig, sliderIsOpen, graphsIsOpen
 
 #------------------------------------------------#
 # Callbacks for detail files
@@ -978,7 +1031,6 @@ def createMap(timestep, runsFile, basicsFile, compareFile, showMode, modeState):
                     "getFillColor": dn.r2Color,
                 }
                 mapLayers.append(r2ScatterLayer)
-
     elif(showMode == "basics"):
 
         # Add the branch layer
@@ -992,17 +1044,18 @@ def createMap(timestep, runsFile, basicsFile, compareFile, showMode, modeState):
                 "id": 'scatterplot-layer2',
                 "data": basics.to_dict(orient='records'),
                 "pickable": False,
-                "opacity": 1.0,
+                "opacity": .75,
                 "stroked": True,
                 "filled": True,
-                "radiusScale":15,
-                "radiusMinPixels":2,
+                #"radiusScale":2500,
+                #"radiusMinPixels":2,
+                "radiusMaxPixels":25,
                 "lineWidthMinPixels": 1,
                 "getPosition": "function(d){return [d['lng'], d['lat']]}",
-                "getRadius": "function(d){return d['GenMWMax']}",
+                "getRadius": "function(d){ return d['GenMWMax']===0? 1500 : d['GenMWMax']*50; }",
                 "getLineWidth":2,
                 "getLineColor": [47, 79, 79],
-                "getFillColor":"function(d){ let color = d['GenMWMax']==0 ? [31,120,180] : [178,223,138]; return color}",
+                "getFillColor":"function(d){ return d['GenMWMax']===0?[255,255,255]:[31,120,180]; }",
             }
             mapLayers.append(scatterLayer)
         else:
