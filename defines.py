@@ -16,8 +16,8 @@ scenarioDirs = {'details50_AC_72hrs':{"label":"AC OPF", "summary":"ac_results.cs
                 'details50_CP_72hrs':{"label":"Copper Plate OPF (Real power only)", "summary":"cp_results.csv"},
                 'details50_ACCP_72hrs':{"label":"Multi-Fidelity AC-CP OPF", "summary":"mf_ACCP_results.csv"},
                 'details50_DCCP_72hrs':{"label":"Multi-Fidelity DC-CP OPF", "summary":"mf_DCCP_results.csv"},
-                'details50_cp_ac_conseq':{"label":"Copper Plate with AC recourse (Includes reactive power)", "summary":"cp_ac_actuals_results.csv"},
-                'details50_cp_dc_conseq':{"label":"Copper Plate with DC recourse (Real power only)", "summary":"cp_dc_actuals_results.csv"}}
+                'details50_cp_ac_conseq':{"label":"Copper Plate with AC consequences (Includes reactive power)", "summary":"cp_ac_actuals_results.csv"},
+                'details50_cp_dc_conseq':{"label":"Copper Plate with DC consequences (Real power only)", "summary":"cp_dc_actuals_results.csv"}}
 detailsFiles = {'real_loss_of_load.csv':{'label':'Real Loss of Load','color':'whiteRed', 'process':False},
                 'real_thermal_set_points_processed.csv':{'label':'Real Thermal Set Points','color':'whiteRed', 'process':True},
                 'real_renewable_setpoints_processed.csv':{'label':'Real Renewable Setpoints','color':'whiteRed', 'process':True},
